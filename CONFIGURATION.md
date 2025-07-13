@@ -227,19 +227,55 @@ class AppConfig:
 }
 ```
 
-## 🤖 AI Agent Configuration
+## 🤖 AI Agent Configuration (Claude 3.5 Sonnet)
 
-### Prompt Analysis Settings
+### Claude AI Settings
 ```python
-"ai_agent": {
-    "analysis_model": "rule_based",  # Future: "llm_based"
+"ai_config": {
+    "provider": "aws_bedrock",
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "region": "us-east-1",
+    "max_tokens": 2000,
+    "temperature": 0.1,
+    "fallback_to_rules": True,
+    "timeout": 30,
+    "retry_attempts": 3
+}
+```
+
+### Advanced AI Configuration
+```python
+"ai_config": {
+    "provider": "aws_bedrock",
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "region": "us-east-1",
+    "max_tokens": 2000,
+    "temperature": 0.1,
+    "fallback_to_rules": True,
+    "prompt_engineering": {
+        "include_context": True,
+        "include_threat_intel": True,
+        "include_historical_analysis": False
+    },
+    "response_validation": {
+        "require_json_format": True,
+        "validate_action_parameters": True,
+        "check_server_capabilities": True
+    },
+    "cost_controls": {
+        "max_tokens_per_day": 100000,
+        "alert_threshold": 80000,
+        "emergency_fallback": True
+    }
+}
+```
+
+### Legacy Rule-Based Configuration (Fallback)
+```python
+"ai_agent_fallback": {
+    "analysis_model": "rule_based",
     "confidence_threshold": 0.8,
     "max_actions_per_event": 5,
-    "action_prioritization": {
-        "high_severity": ["servicenow", "cyberreason", "virustotal"],
-        "medium_severity": ["virustotal", "custom_rest"],
-        "low_severity": ["virustotal"]
-    },
     "keyword_mappings": {
         "malicious": ["virustotal"],
         "ticket": ["servicenow"],

@@ -41,11 +41,21 @@ class AppConfig:
             "auto_offset_reset": "latest"
         }
         
+        self.ai_config = {
+            "provider": "aws_bedrock",
+            "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "region": "us-east-1",
+            "max_tokens": 2000,
+            "temperature": 0.1,
+            "fallback_to_rules": True
+        }
+        
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
             "mcp_servers": self.mcp_servers,
-            "kafka_config": self.kafka_config
+            "kafka_config": self.kafka_config,
+            "ai_config": self.ai_config
         }
         
     def save_to_file(self, file_path: str):
@@ -62,6 +72,7 @@ class AppConfig:
                 data = json.load(f)
                 config.mcp_servers = data.get("mcp_servers", config.mcp_servers)
                 config.kafka_config = data.get("kafka_config", config.kafka_config)
+                config.ai_config = data.get("ai_config", config.ai_config)
         except FileNotFoundError:
             pass  # Use default configuration
         return config

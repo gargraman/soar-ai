@@ -7,10 +7,11 @@ A comprehensive cybersecurity application that uses the Model Context Protocol (
 
 ### MCP Client (Desktop App)
 - **Multi-source Event Input**: Upload JSON/CSV files or stream from Kafka topics
-- **Natural Language Processing**: Accept user prompts in plain English
-- **AI-Powered Decision Making**: Automatically determine which MCP servers to query
-- **Interactive Results Display**: View enrichment data, analysis results, and response actions
-- **Comprehensive Audit Trail**: Track all agent decisions and API calls
+- **Claude 3.5 Sonnet AI**: Advanced reasoning using Anthropic's Claude 3.5 Sonnet via AWS Bedrock
+- **Natural Language Processing**: Accept complex user prompts in plain English
+- **AI-Powered Decision Making**: Intelligent analysis and automated MCP server selection
+- **Interactive Results Display**: View enrichment data, analysis results, and AI reasoning
+- **Comprehensive Audit Trail**: Track all agent decisions, API calls, and AI analysis
 
 ### Supported MCP Servers
 1. **VirusTotal Server** - IP and domain reputation lookup
@@ -77,6 +78,34 @@ Use the provided sample files:
 - "Analyze these network events for indicators of compromise"
 - "Get endpoint status from CyberReason for any compromised hosts"
 - "Enrich all IOCs and create incident reports for high-severity events"
+
+## 🤖 Claude 3.5 Sonnet AI Integration
+
+The application uses **Claude 3.5 Sonnet** from AWS Bedrock for intelligent security event analysis:
+
+### AI Capabilities
+- **Contextual Understanding**: Analyzes security events with deep contextual awareness
+- **Natural Language Processing**: Understands complex, nuanced user prompts
+- **Threat Assessment**: Provides intelligent severity and risk assessments
+- **Action Prioritization**: Determines optimal sequence of security actions
+- **Fallback Logic**: Automatically falls back to rule-based analysis if needed
+
+### Example AI Analysis
+```
+User Prompt: "Investigate this suspicious network activity and create tickets for anything critical"
+
+Claude's Analysis:
+- Identifies suspicious IP patterns in network traffic
+- Determines threat severity based on IOC reputation
+- Recommends VirusTotal enrichment for all IPs
+- Suggests ServiceNow incident creation for high-risk events
+- Provides detailed reasoning for each decision
+```
+
+### Setup Requirements
+1. AWS Account with Bedrock access
+2. Claude 3.5 Sonnet model access approved
+3. AWS credentials configured (see [AWS_SETUP.md](AWS_SETUP.md))
 
 ## 🎯 Usage Examples
 
