@@ -5,6 +5,7 @@ import re
 import boto3
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+from .event_parser import EventParser, SecurityEventTaxonomy
 
 class EventProcessor:
     """AI-driven event processor using Claude 3.5 Sonnet from AWS Bedrock"""
@@ -16,12 +17,16 @@ class EventProcessor:
             region_name='us-east-1'  # Claude is available in us-east-1
         )
         self.claude_model_id = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        self.event_parser = EventParser()
         
-    async def process_event(self, event_data: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
+    async def process_event(self, event_data: Dict[str, Any], user_prompt: str, event_format: str = "auto") -> Dict[str, Any]:
         """Process a security event using Claude 3.5 Sonnet AI reasoning"""
         
-        # Extract event attributes first
-        event_attributes = self.extract_event_attributes(event_data)
+        # Parse event using standardized taxonomy
+        parsed_event = self.event_parser.parse_event(event_data, event_format)
+        
+        # Convert parsed event to dictionary for analysis
+        event_attributes = parsed_event.to_dict()
         
         # Use Claude to analyze event and prompt to determine actions
         analysis = await self.analyze_with_claude(event_data, event_attributes, user_prompt)
@@ -30,11 +35,13 @@ class EventProcessor:
         results = await self.execute_actions(event_data, analysis)
         
         return {
-            "event_id": event_data.get("id", "unknown"),
+            "event_id": parsed_event.event_id or event_data.get("id", "unknown"),
             "timestamp": datetime.now().isoformat(),
+            "parsed_event": event_attributes,
             "analysis": analysis,
             "results": results,
-            "user_prompt": user_prompt
+            "user_prompt": user_prompt,
+            "original_format": event_format
         }
         
     async def analyze_with_claude(self, event_data: Dict[str, Any], event_attributes: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
@@ -100,10 +107,10 @@ Available MCP Servers and their capabilities:
    - dynamic_api_calls: Make calls to registered third-party APIs
    - osint_lookup: Open source intelligence gathering
 
-Security Event Data:
+Original Event Data:
 {json.dumps(event_data, indent=2)}
 
-Extracted Event Attributes:
+Standardized Event Attributes (using Security Event Taxonomy):
 {json.dumps(event_attributes, indent=2)}
 
 User Prompt: "{user_prompt}"

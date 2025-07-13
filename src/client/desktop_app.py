@@ -196,15 +196,15 @@ class CyberSecurityApp:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to process events: {str(e)}")
             
-    async def process_single_event(self, event_data, prompt=None):
+    async def process_single_event(self, event_data, prompt=None, event_format="auto"):
         """Process a single security event"""
         if prompt is None:
             prompt = self.prompt_text.get('1.0', tk.END).strip()
             
-        return await self.event_processor.process_event(event_data, prompt)
+        return await self.event_processor.process_event(event_data, prompt, event_format)
         
     def load_events_from_file(self, file_path):
-        """Load events from JSON or CSV file"""
+        """Load events from JSON, CSV, or syslog file"""
         events = []
         
         if file_path.endswith('.json'):
@@ -218,6 +218,24 @@ class CyberSecurityApp:
             with open(file_path, 'r') as f:
                 reader = csv.DictReader(f)
                 events = list(reader)
+        elif file_path.endswith('.log') or file_path.endswith('.syslog'):
+            # Load syslog file line by line
+            with open(file_path, 'r') as f:
+                events = [line.strip() for line in f if line.strip()]
+        else:
+            # Try to auto-detect format
+            with open(file_path, 'r') as f:
+                content = f.read().strip()
+                try:
+                    # Try JSON first
+                    data = json.loads(content)
+                    if isinstance(data, list):
+                        events = data
+                    else:
+                        events = [data]
+                except:
+                    # Try line-by-line syslog
+                    events = [line.strip() for line in content.split('\n') if line.strip()]
                 
         return events
         

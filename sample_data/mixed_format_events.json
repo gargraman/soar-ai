@@ -1,0 +1,50 @@
+
+[
+  {
+    "format": "crowdstrike",
+    "event": {
+      "event_id": "det_12345",
+      "timestamp": "2024-01-20T10:30:00Z",
+      "ComputerName": "LAPTOP-001",
+      "UserName": "john.doe",
+      "FileName": "malicious.exe",
+      "FilePath": "C:\\Users\\john.doe\\Downloads\\malicious.exe",
+      "MD5String": "d41d8cd98f00b204e9800998ecf8427e",
+      "SHA256String": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ProcessDisplayName": "malicious.exe",
+      "DetectDescription": "Malware detected and quarantined",
+      "Severity": "High"
+    }
+  },
+  {
+    "format": "windows_eventlog", 
+    "event": {
+      "EventID": 4624,
+      "TimeCreated": "2024-01-20T10:35:00Z",
+      "Computer": "DC-001",
+      "Channel": "Security",
+      "SubjectUserName": "admin",
+      "SubjectDomainName": "COMPANY",
+      "IpAddress": "192.168.1.100",
+      "LogonType": 3,
+      "ProcessName": "winlogon.exe"
+    }
+  },
+  {
+    "format": "syslog",
+    "event": "<166>Jan 20 10:40:00 firewall.company.com %ASA-6-302013: Built outbound TCP connection 12345 for outside:203.0.113.45/443 to inside:192.168.1.100/54321"
+  },
+  {
+    "format": "generic",
+    "event": {
+      "id": "alert_001",
+      "timestamp": "2024-01-20T10:45:00Z", 
+      "event_type": "network_intrusion",
+      "severity": "high",
+      "source_ip": "203.0.113.45",
+      "destination_ip": "192.168.1.100",
+      "rule_name": "Suspicious Network Activity",
+      "description": "Potential data exfiltration detected"
+    }
+  }
+]
