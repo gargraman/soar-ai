@@ -118,6 +118,12 @@ Agent Decision:
 Result: Host confirmed compromised with active malware
 ```
 
+## 📚 Documentation
+
+- **[Setup Guide](SETUP.md)** - Complete installation and configuration instructions
+- **[Configuration Reference](CONFIGURATION.md)** - Detailed configuration options and examples
+- **[User Guide](USER_GUIDE.md)** - Comprehensive usage instructions and examples
+
 ## 🔧 Configuration
 
 ### MCP Server Configuration
