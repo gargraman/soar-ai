@@ -1,3 +1,4 @@
+
 # User Guide - AI Cybersecurity Agent
 
 Complete guide for using the AI-Driven Agentic Cybersecurity Application with MCP.
@@ -169,28 +170,11 @@ The desktop application consists of four main tabs:
 - "Investigate terminal compromise status"
 - "Analyze endpoint for active threats"
 
-#### Complex Analysis
+**Complex Analysis**
 - "Analyze network events for indicators of compromise"
 - "Investigate authentication failures and create tickets if needed"
-- "Enrich all IOCs and create incident for high-severity events"
+- "Enrich IOCs and create incident for high-severity events"
 - "Full investigation workflow for malware detection"
-
-#### Sequential Flow Orchestration
-- "First check IP reputation, then create ticket if malicious, finally investigate endpoint status"
-- "Enrich all IOCs via VirusTotal, then create ServiceNow incident with threat intelligence, then check all endpoints via CyberReason"
-- "Analyze file hash for malware, if confirmed malicious create critical incident and check affected endpoints"
-- "Investigate authentication anomalies step by step: check source IP reputation, create incident if threats found, then analyze endpoint security"
-
-#### Conditional Logic Flows
-- "Check IP reputation, if threat score > 80 create critical incident and investigate all related endpoints"
-- "Analyze domain reputation, create incident only if malicious detections > 5, then update incident with endpoint findings"
-- "For each suspicious file hash: analyze via VirusTotal, if malicious create incident, then check host status and update incident accordingly"
-- "Sequential threat hunt: check all IOCs, create incidents for high-risk findings, investigate endpoints for confirmed threats"
-
-#### Multi-Stage Investigation Workflows
-- "Complete security incident response: analyze all IOCs, create incident with findings, investigate affected systems, update incident with remediation status"
-- "Advanced threat hunting: enrich network indicators, correlate with endpoint data, create comprehensive incident report with full timeline"
-- "Malware outbreak investigation: analyze file signatures, check reputation across all security feeds, create incident, map affected endpoints, coordinate response"
 
 ### Decision-Making Logic
 

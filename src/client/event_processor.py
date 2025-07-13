@@ -49,7 +49,7 @@ class EventProcessor:
                 modelId=self.claude_model_id,
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 3000,
+                    "max_tokens": 2000,
                     "temperature": 0.1,
                     "messages": [
                         {
@@ -77,13 +77,12 @@ class EventProcessor:
     def build_claude_prompt(self, event_data: Dict[str, Any], event_attributes: Dict[str, Any], user_prompt: str) -> str:
         """Build a comprehensive prompt for Claude analysis"""
         
-        prompt = f"""You are an expert cybersecurity analyst AI agent working with a Model Context Protocol (MCP) system. Your task is to analyze security events and determine which MCP servers to query based on the event data and user instructions. You can create sequential flows where one server's output feeds into another server's input.
+        prompt = f"""You are an expert cybersecurity analyst AI agent working with a Model Context Protocol (MCP) system. Your task is to analyze security events and determine which MCP servers to query based on the event data and user instructions.
 
 Available MCP Servers and their capabilities:
 1. VirusTotal Server:
    - ip_report: Get IP reputation and threat intelligence
    - domain_report: Get domain reputation and threat intelligence
-   - file_report: Get file hash analysis results
 
 2. ServiceNow Server:
    - create_record: Create incident tickets for security events
@@ -98,7 +97,6 @@ Available MCP Servers and their capabilities:
 4. Custom REST Server:
    - custom_enrichment: Call custom threat intelligence APIs
    - dynamic_api_calls: Make calls to registered third-party APIs
-   - osint_lookup: Open source intelligence gathering
 
 Security Event Data:
 {json.dumps(event_data, indent=2)}
@@ -108,64 +106,37 @@ Extracted Event Attributes:
 
 User Prompt: "{user_prompt}"
 
-IMPORTANT: You can create sequential flows where actions depend on previous results. Use the "depends_on" field to specify dependencies and the "condition" field to specify when an action should execute based on previous results.
-
-Example sequential flow:
-1. First: Check IP reputation via VirusTotal
-2. Then: IF threat score > 70, create ServiceNow incident
-3. Then: IF incident created, check endpoint status via CyberReason
-4. Finally: Update ServiceNow incident with endpoint findings
-
 Please analyze this security event and user prompt, then determine:
 1. What actions should be taken based on the event content and user request
-2. Which MCP servers should be queried and in what order
-3. How outputs from one server should influence subsequent actions
-4. The reasoning behind your flow orchestration decisions
+2. Which MCP servers should be queried and with what parameters
+3. The reasoning behind your decisions
+4. Priority/severity assessment
 
 Respond in the following JSON format:
 {{
-    "reasoning": "Your detailed analysis and reasoning about the sequential flow",
+    "reasoning": "Your detailed analysis and reasoning",
     "severity_assessment": "low|medium|high|critical",
-    "flow_strategy": "Description of the overall flow strategy and server interaction approach",
     "determined_actions": [
         {{
-            "step": 1,
             "server": "server_name",
             "action": "action_name",
             "parameters": {{"key": "value"}},
             "priority": "low|medium|high",
-            "depends_on": null,
-            "condition": null,
-            "rationale": "Why this action is needed and why it's first"
-        }},
-        {{
-            "step": 2,
-            "server": "server_name",
-            "action": "action_name",
-            "parameters": {{"key": "value"}},
-            "priority": "low|medium|high",
-            "depends_on": 1,
-            "condition": "threat_score > 70",
-            "rationale": "Why this action depends on step 1 results"
+            "rationale": "Why this action is needed"
         }}
     ],
     "risk_indicators": [
         "List of identified risk indicators"
-    ],
-    "expected_flow_outcomes": [
-        "What you expect from each step in the flow"
     ],
     "recommended_follow_up": "Additional recommendations"
 }}
 
 Focus on:
 - IOC (Indicators of Compromise) identification and enrichment
-- Sequential threat analysis workflows
-- Conditional logic based on threat intelligence results
-- Comprehensive incident management flows
-- Endpoint investigation cascades
-- Context-aware server selection and ordering
-- Dependencies between different security analysis steps
+- Threat severity assessment
+- Appropriate incident management
+- Endpoint security analysis when hostnames are present
+- Contextual understanding of the user's intent
 """
         return prompt
     
@@ -180,19 +151,12 @@ Focus on:
                 json_str = claude_response[json_start:json_end]
                 claude_analysis = json.loads(json_str)
                 
-                # Sort actions by step number for proper sequential execution
-                determined_actions = claude_analysis.get("determined_actions", [])
-                if determined_actions:
-                    determined_actions.sort(key=lambda x: x.get("step", 0))
-                
                 return {
                     "event_attributes": event_attributes,
-                    "determined_actions": determined_actions,
+                    "determined_actions": claude_analysis.get("determined_actions", []),
                     "reasoning": claude_analysis.get("reasoning", ""),
-                    "flow_strategy": claude_analysis.get("flow_strategy", ""),
                     "severity_assessment": claude_analysis.get("severity_assessment", "medium"),
                     "risk_indicators": claude_analysis.get("risk_indicators", []),
-                    "expected_flow_outcomes": claude_analysis.get("expected_flow_outcomes", []),
                     "recommended_follow_up": claude_analysis.get("recommended_follow_up", ""),
                     "ai_model": "claude-3.5-sonnet"
                 }
@@ -206,10 +170,8 @@ Focus on:
                 "event_attributes": event_attributes,
                 "determined_actions": [],
                 "reasoning": f"Claude response parsing failed: {str(e)}",
-                "flow_strategy": "Fallback to simple analysis",
                 "severity_assessment": "medium",
                 "risk_indicators": [],
-                "expected_flow_outcomes": [],
                 "recommended_follow_up": "Manual review required",
                 "ai_model": "claude-3.5-sonnet-fallback"
             }
@@ -315,184 +277,32 @@ Focus on:
         return attributes
         
     async def execute_actions(self, event_data: Dict[str, Any], analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Execute the determined actions via MCP servers in sequential order with dependency handling"""
+        """Execute the determined actions via MCP servers"""
         results = []
-        action_results = {}  # Store results by step number for dependency resolution
         
         for action in analysis["determined_actions"]:
-            step = action.get("step", len(results) + 1)
-            
-            # Check if this action depends on a previous step
-            depends_on = action.get("depends_on")
-            condition = action.get("condition")
-            
-            should_execute = True
-            dependency_result = None
-            
-            if depends_on is not None:
-                dependency_result = action_results.get(depends_on)
-                if dependency_result is None:
-                    should_execute = False
-                    results.append({
-                        "step": step,
-                        "action": action,
-                        "success": False,
-                        "error": f"Dependency step {depends_on} not found or failed",
-                        "timestamp": datetime.now().isoformat(),
-                        "ai_reasoning": action.get("rationale", ""),
-                        "skipped": True
-                    })
-                    continue
+            try:
+                result = await self.mcp_client.call_server(
+                    action["server"],
+                    action["action"], 
+                    action["parameters"]
+                )
                 
-                # Evaluate condition if specified
-                if condition and not self.evaluate_condition(condition, dependency_result):
-                    should_execute = False
-                    results.append({
-                        "step": step,
-                        "action": action,
-                        "success": True,
-                        "result": {"message": f"Condition '{condition}' not met, step skipped"},
-                        "timestamp": datetime.now().isoformat(),
-                        "ai_reasoning": action.get("rationale", ""),
-                        "skipped": True,
-                        "condition_evaluated": condition
-                    })
-                    continue
-            
-            if should_execute:
-                try:
-                    # Enhance parameters with dependency results if needed
-                    enhanced_parameters = self.enhance_parameters_with_dependencies(
-                        action["parameters"], dependency_result, action
-                    )
-                    
-                    result = await self.mcp_client.call_server(
-                        action["server"],
-                        action["action"], 
-                        enhanced_parameters
-                    )
-                    
-                    action_result = {
-                        "step": step,
-                        "action": action,
-                        "success": True,
-                        "result": result,
-                        "timestamp": datetime.now().isoformat(),
-                        "ai_reasoning": action.get("rationale", ""),
-                        "dependency_used": depends_on is not None
-                    }
-                    
-                    results.append(action_result)
-                    action_results[step] = action_result
-                    
-                except Exception as e:
-                    error_result = {
-                        "step": step,
-                        "action": action,
-                        "success": False,
-                        "error": str(e),
-                        "timestamp": datetime.now().isoformat(),
-                        "ai_reasoning": action.get("rationale", ""),
-                        "dependency_used": depends_on is not None
-                    }
-                    
-                    results.append(error_result)
-                    # Don't store failed results for dependencies
+                results.append({
+                    "action": action,
+                    "success": True,
+                    "result": result,
+                    "timestamp": datetime.now().isoformat(),
+                    "ai_reasoning": action.get("rationale", "")
+                })
+                
+            except Exception as e:
+                results.append({
+                    "action": action,
+                    "success": False,
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                    "ai_reasoning": action.get("rationale", "")
+                })
                 
         return results
-    
-    def evaluate_condition(self, condition: str, dependency_result: Dict[str, Any]) -> bool:
-        """Evaluate a condition based on dependency result"""
-        try:
-            if not dependency_result.get("success", False):
-                return False
-                
-            result_data = dependency_result.get("result", {})
-            
-            # Common condition patterns
-            if "threat_score" in condition:
-                # Extract threat score from various possible locations
-                threat_score = 0
-                if "threat_score" in result_data:
-                    threat_score = result_data["threat_score"]
-                elif "data" in result_data and "threat_score" in result_data["data"]:
-                    threat_score = result_data["data"]["threat_score"]
-                elif "malicious" in result_data and "total" in result_data:
-                    # VirusTotal-style response
-                    malicious = result_data.get("malicious", 0)
-                    total = result_data.get("total", 1)
-                    threat_score = (malicious / total) * 100 if total > 0 else 0
-                
-                # Evaluate numeric conditions
-                if ">" in condition:
-                    threshold = float(condition.split(">")[1].strip())
-                    return threat_score > threshold
-                elif "<" in condition:
-                    threshold = float(condition.split("<")[1].strip())
-                    return threat_score < threshold
-                elif "==" in condition:
-                    threshold = float(condition.split("==")[1].strip())
-                    return threat_score == threshold
-            
-            elif "severity" in condition:
-                severity = result_data.get("severity", "").lower()
-                if "high" in condition.lower():
-                    return severity in ["high", "critical"]
-                elif "critical" in condition.lower():
-                    return severity == "critical"
-                elif "medium" in condition.lower():
-                    return severity in ["medium", "high", "critical"]
-            
-            elif "compromised" in condition.lower():
-                status = result_data.get("status", "").lower()
-                return "compromised" in status or "infected" in status
-            
-            elif "malicious" in condition.lower():
-                return result_data.get("malicious", 0) > 0 or "malicious" in str(result_data).lower()
-            
-            return True  # Default to true if condition can't be evaluated
-            
-        except Exception as e:
-            print(f"Error evaluating condition '{condition}': {e}")
-            return False
-    
-    def enhance_parameters_with_dependencies(self, parameters: Dict[str, Any], dependency_result: Dict[str, Any], action: Dict[str, Any]) -> Dict[str, Any]:
-        """Enhance action parameters with data from dependency results"""
-        if not dependency_result or not dependency_result.get("success"):
-            return parameters
-        
-        enhanced_params = parameters.copy()
-        result_data = dependency_result.get("result", {})
-        
-        # Auto-enhance ServiceNow incident creation with threat intelligence
-        if action.get("server") == "servicenow" and action.get("action") == "create_record":
-            if "description" in enhanced_params:
-                # Append threat intelligence findings to description
-                if "threat_score" in result_data:
-                    enhanced_params["description"] += f"\n\nThreat Intelligence:\nThreat Score: {result_data['threat_score']}"
-                if "malicious" in result_data and "total" in result_data:
-                    enhanced_params["description"] += f"\nVirusTotal Detections: {result_data['malicious']}/{result_data['total']}"
-                if "reputation" in result_data:
-                    enhanced_params["description"] += f"\nReputation: {result_data['reputation']}"
-            
-            # Set priority based on threat level
-            if "threat_score" in result_data:
-                threat_score = result_data["threat_score"]
-                if threat_score > 80:
-                    enhanced_params["priority"] = "1 - Critical"
-                elif threat_score > 60:
-                    enhanced_params["priority"] = "2 - High"
-                elif threat_score > 30:
-                    enhanced_params["priority"] = "3 - Medium"
-                else:
-                    enhanced_params["priority"] = "4 - Low"
-        
-        # Auto-enhance incident updates with endpoint findings
-        elif action.get("server") == "servicenow" and action.get("action") == "update_record":
-            if "status" in result_data:
-                enhanced_params["additional_comments"] = f"Endpoint Status: {result_data['status']}"
-                if result_data.get("status") == "compromised":
-                    enhanced_params["state"] = "In Progress"
-                    enhanced_params["priority"] = "1 - Critical"
-        
-        return enhanced_params

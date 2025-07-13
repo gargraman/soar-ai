@@ -74,21 +74,10 @@ Use the provided sample files:
 - `sample_data/security_events.csv` - Additional events in CSV format
 
 ### 4. Try Example Prompts
-
-#### Basic Prompts
-- "Check if this IP is malicious"
-- "Create a ServiceNow ticket for this security event"
-- "Get endpoint status from CyberReason"
-
-#### Sequential Flow Prompts
-- "First check IP reputation via VirusTotal, then create ServiceNow incident if threat score > 70, finally investigate endpoint status via CyberReason"
-- "Analyze all IOCs for reputation, create incident with threat intelligence, then check affected endpoints and update incident"
-- "Complete investigation workflow: enrich indicators, create incident if threats found, investigate endpoints, coordinate response"
-
-#### Conditional Logic Prompts
 - "Check if this IP is malicious and create a high-priority ServiceNow ticket if threat level is critical"
-- "Analyze these network events for indicators of compromise, create incidents only for high-severity findings"
-- "Get endpoint status from CyberReason for any compromised hosts, create incidents for confirmed compromises"
+- "Analyze these network events for indicators of compromise"
+- "Get endpoint status from CyberReason for any compromised hosts"
+- "Enrich all IOCs and create incident reports for high-severity events"
 
 ## 🤖 Claude 3.5 Sonnet AI Integration
 
