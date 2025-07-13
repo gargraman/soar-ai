@@ -1,0 +1,90 @@
+
+[
+  {
+    "id": "evt_malware_001",
+    "timestamp": "2024-01-20T10:30:00Z",
+    "event_type": "malware_detection",
+    "severity": "high",
+    "source_ip": "192.168.1.100",
+    "destination_ip": "203.0.113.45",
+    "hostname": "workstation-01",
+    "user": "jdoe",
+    "description": "Suspicious executable detected and quarantined",
+    "indicators": {
+      "file_hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "file_path": "/tmp/malware.exe",
+      "file_size": 1024000
+    },
+    "detection_engine": "CrowdStrike",
+    "rule_name": "Malware.Win32.Trojan"
+  },
+  {
+    "id": "evt_network_001", 
+    "timestamp": "2024-01-20T10:35:00Z",
+    "event_type": "network_anomaly",
+    "severity": "medium",
+    "source_ip": "192.168.1.50", 
+    "destination_domain": "malicious-domain.com",
+    "destination_ip": "198.51.100.25",
+    "hostname": "server-02",
+    "description": "Unusual outbound network traffic to suspicious domain",
+    "indicators": {
+      "bytes_transferred": 50000,
+      "connection_count": 15,
+      "protocol": "HTTPS"
+    },
+    "detection_engine": "Palo Alto",
+    "rule_name": "Suspicious_Outbound_Traffic"
+  },
+  {
+    "id": "evt_login_001",
+    "timestamp": "2024-01-20T10:40:00Z",
+    "event_type": "failed_login_attempts", 
+    "severity": "low",
+    "source_ip": "203.0.113.45",
+    "hostname": "web-server-01",
+    "user": "admin",
+    "description": "Multiple failed login attempts detected",
+    "indicators": {
+      "attempt_count": 25,
+      "time_window": "5 minutes",
+      "auth_method": "password"
+    },
+    "detection_engine": "Windows Security",
+    "rule_name": "Multiple_Failed_Logins"
+  },
+  {
+    "id": "evt_phishing_001",
+    "timestamp": "2024-01-20T10:45:00Z", 
+    "event_type": "phishing_attempt",
+    "severity": "high",
+    "source_ip": "198.51.100.10",
+    "hostname": "mail-server-01",
+    "user": "alice@company.com",
+    "description": "Phishing email with malicious attachment detected",
+    "indicators": {
+      "sender_domain": "fake-bank.com",
+      "attachment_hash": "e99a18c428cb38d5f260853678922e03",
+      "subject": "Urgent: Account Verification Required"
+    },
+    "detection_engine": "Proofpoint",
+    "rule_name": "Phishing_Email_Detection"
+  },
+  {
+    "id": "evt_persistence_001",
+    "timestamp": "2024-01-20T10:50:00Z",
+    "event_type": "persistence_mechanism",
+    "severity": "critical",
+    "source_ip": "192.168.1.75",
+    "hostname": "workstation-03", 
+    "user": "system",
+    "description": "Suspicious registry modification for persistence",
+    "indicators": {
+      "registry_key": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "registry_value": "malicious_service.exe",
+      "process_name": "svchost.exe"
+    },
+    "detection_engine": "Carbon Black",
+    "rule_name": "Registry_Persistence_Detected"
+  }
+]

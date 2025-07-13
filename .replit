@@ -13,3 +13,24 @@ requiredFiles = [".replit", "replit.nix"]
 [deployment]
 run = ["python3", "main.py"]
 deploymentTarget = "cloudrun"
+
+[workflows]
+runButton = "Run Cybersecurity App"
+
+[[workflows.workflow]]
+name = "Start MCP Servers"
+author = 43172693
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python launch_servers.py"
+
+[[workflows.workflow]]
+name = "Run Cybersecurity App"
+author = 43172693
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"

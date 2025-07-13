@@ -1,0 +1,7 @@
+
+id,timestamp,event_type,severity,source_ip,destination_ip,hostname,user,description
+evt_web_001,2024-01-20T11:00:00Z,web_attack,medium,203.0.113.50,192.168.1.200,web-server-02,www-data,SQL injection attempt detected
+evt_dns_001,2024-01-20T11:05:00Z,dns_tunneling,high,192.168.1.80,8.8.8.8,workstation-04,bsmith,Suspicious DNS queries indicating data exfiltration
+evt_privilege_001,2024-01-20T11:10:00Z,privilege_escalation,critical,192.168.1.90,0.0.0.0,domain-controller-01,administrator,Unauthorized privilege escalation attempt
+evt_lateral_001,2024-01-20T11:15:00Z,lateral_movement,high,192.168.1.100,192.168.1.110,workstation-01,jdoe,Suspicious SMB activity indicating lateral movement
+evt_data_001,2024-01-20T11:20:00Z,data_exfiltration,critical,192.168.1.120,203.0.113.75,file-server-01,backup_service,Large data transfer to external IP detected
