@@ -32,6 +32,13 @@ class AppConfig:
                 "base_url": "http://0.0.0.0:8004",
                 "capabilities": ["custom_enrichment"],
                 "auth_headers": {}
+            },
+            "cloud_ivx": {
+                "base_url": "http://0.0.0.0:8005",
+                "capabilities": ["lookup_hashes", "get_report", "analyse_url", "analyse_file"],
+                "auth_headers": {
+                    "X-API-Key": "your-trellix-cloud-ivx-api-key"
+                }
             }
         }
         

@@ -1,0 +1,117 @@
+[
+  {
+    "id": "SEC-2024-001",
+    "timestamp": "2024-01-20T10:30:00Z",
+    "event_type": "malware_detection",
+    "source": "endpoint_protection",
+    "severity": "high",
+    "hostname": "workstation-01",
+    "ip_address": "192.168.1.100",
+    "description": "Suspicious file detected and quarantined",
+    "file_path": "C:\\Users\\john\\Downloads\\invoice.exe",
+    "file_hash_md5": "5d41402abc4b2a76b9719d911017c592",
+    "file_hash_sha1": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+    "file_hash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "process_name": "invoice.exe",
+    "process_id": 1234,
+    "user": "john.doe",
+    "action_taken": "quarantined",
+    "threat_name": "Trojan.GenKD.12345"
+  },
+  {
+    "id": "SEC-2024-002", 
+    "timestamp": "2024-01-20T10:45:00Z",
+    "event_type": "network_intrusion",
+    "source": "ids",
+    "severity": "medium",
+    "src_ip": "192.168.1.50",
+    "dst_ip": "10.0.0.100",
+    "port": 443,
+    "protocol": "HTTPS",
+    "description": "Suspicious outbound connection detected",
+    "url": "https://suspicious-domain.com/api/data",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Malicious/1.0",
+    "bytes_transferred": 1024000,
+    "connection_duration": 300
+  },
+  {
+    "id": "SEC-2024-003",
+    "timestamp": "2024-01-20T11:00:00Z", 
+    "event_type": "file_analysis_request",
+    "source": "security_analyst",
+    "severity": "medium",
+    "description": "Manual file submission for analysis",
+    "submitted_files": [
+      {
+        "name": "document.pdf",
+        "size": 256000,
+        "md5": "098f6bcd4621d373cade4e832627b4f6",
+        "sha1": "356a192b7913b04c54574d18c28d46e6395428ab",
+        "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+      },
+      {
+        "name": "suspicious.dll",
+        "size": 512000,
+        "md5": "c4ca4238a0b923820dcc509a6f75849b",
+        "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+        "sha256": "e258d248fda94c63753607f7c4494ee0fcbe92f1a76bfdac795c9d84101eb317"
+      }
+    ],
+    "analyst": "jane.smith@company.com",
+    "submission_reason": "Potential malware investigation"
+  },
+  {
+    "id": "SEC-2024-004",
+    "timestamp": "2024-01-20T11:15:00Z",
+    "event_type": "url_analysis_request", 
+    "source": "phishing_investigation",
+    "severity": "high",
+    "description": "Suspicious URLs found in phishing email investigation",
+    "urls": [
+      "http://malicious-banking-site.com/login",
+      "https://fake-microsoft-update.net/download",
+      "http://suspicious-crypto-exchange.org/api"
+    ],
+    "email_subject": "Urgent: Account Verification Required",
+    "sender": "noreply@fake-bank.com",
+    "recipients": ["alice@company.com", "bob@company.com"],
+    "investigation_id": "PHISH-2024-001"
+  },
+  {
+    "id": "SEC-2024-005",
+    "timestamp": "2024-01-20T11:30:00Z",
+    "event_type": "endpoint_compromise",
+    "source": "edr",
+    "severity": "critical",
+    "hostname": "server-02",
+    "ip_address": "192.168.1.50", 
+    "description": "Multiple IoCs detected indicating compromise",
+    "indicators": {
+      "file_hashes": [
+        "d41d8cd98f00b204e9800998ecf8427e",
+        "5d41402abc4b2a76b9719d911017c592",
+        "098f6bcd4621d373cade4e832627b4f6"
+      ],
+      "suspicious_ips": [
+        "185.220.100.240",
+        "192.168.1.100", 
+        "10.0.0.100"
+      ],
+      "malicious_domains": [
+        "malware-c2.com",
+        "evil-command-control.net"
+      ]
+    },
+    "lateral_movement": true,
+    "persistence_detected": true,
+    "data_exfiltration": true,
+    "attack_chain": [
+      "initial_access",
+      "execution", 
+      "persistence",
+      "lateral_movement",
+      "collection",
+      "exfiltration"
+    ]
+  }
+]

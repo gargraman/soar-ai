@@ -29,6 +29,7 @@ The project follows a client-server architecture:
 2. **ServiceNow Server** (port 8002): Incident and task management
 3. **CyberReason Server** (port 8003): Endpoint status and threat detection
 4. **Custom REST Server** (port 8004): Generic REST API wrapper
+5. **Trellix Cloud IVX Server** (port 8005): File/URL malware analysis and threat intelligence
 
 ## Common Development Commands
 
@@ -100,6 +101,7 @@ Each MCP server requires specific authentication:
 - **ServiceNow**: `Authorization` header (Basic/Bearer)
 - **CyberReason**: `Authorization` Bearer token
 - **Custom REST**: Configurable per API
+- **Trellix Cloud IVX**: `X-API-Key` header
 
 ## AI Provider Configuration
 

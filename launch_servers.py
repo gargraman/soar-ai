@@ -32,7 +32,8 @@ def main():
         ("src/servers/virustotal_server.py", 8001, "VirusTotal"),
         ("src/servers/servicenow_server.py", 8002, "ServiceNow"), 
         ("src/servers/cyberreason_server.py", 8003, "CyberReason"),
-        ("src/servers/custom_rest_server.py", 8004, "Custom REST")
+        ("src/servers/custom_rest_server.py", 8004, "Custom REST"),
+        ("src/servers/cloud_ivx_server.py", 8005, "Trellix Cloud IVX")
     ]
     
     processes = []

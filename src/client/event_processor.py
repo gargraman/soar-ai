@@ -126,6 +126,12 @@ Available MCP Servers and their capabilities:
    - dynamic_api_calls: Make calls to registered third-party APIs
    - osint_lookup: Open source intelligence gathering
 
+5. Trellix Cloud IVX Server:
+   - lookup_hashes: Get detailed malware analysis for file hashes (MD5, SHA1, SHA256)
+   - get_report: Retrieve detailed malware analysis reports by report ID
+   - analyse_url: Submit URLs for malware analysis and sandboxing
+   - analyse_file: Submit files for malware analysis and sandboxing
+
 Original Event Data:
 {json.dumps(event_data, indent=2)}
 
@@ -256,6 +262,28 @@ Focus on:
                         "priority": "medium",
                         "rationale": "IP reputation check requested"
                     })
+        
+        # Hash analysis with cloud_ivx for malware detection
+        if any(keyword in prompt_lower for keyword in ["hash", "malware", "file", "analysis", "threat"]):
+            indicators = event_attributes.get("indicators", {})
+            all_hashes = []
+            
+            # Collect all hash types
+            for hash_type in ["md5", "sha1", "sha256"]:
+                if hash_type in indicators:
+                    all_hashes.extend(indicators[hash_type])
+            
+            if all_hashes:
+                actions.append({
+                    "server": "cloud_ivx",
+                    "action": "lookup_hashes",
+                    "parameters": {
+                        "hashes": all_hashes[:10],  # Limit to 10 hashes
+                        "enable_raw_json": False
+                    },
+                    "priority": "high",
+                    "rationale": "File hash malware analysis requested"
+                })
                     
         if any(keyword in prompt_lower for keyword in ["ticket", "incident", "servicenow"]):
             actions.append({
