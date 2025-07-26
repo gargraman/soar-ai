@@ -2,22 +2,26 @@
 import asyncio
 import json
 import re
-import boto3
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from .event_parser import EventParser, SecurityEventTaxonomy
+from .ai_provider import AIProviderFactory, RuleBasedFallback
+from ..config.settings import AppConfig
 
 class EventProcessor:
-    """AI-driven event processor using Claude 3.5 Sonnet from AWS Bedrock"""
+    """AI-driven event processor supporting multiple AI providers"""
     
-    def __init__(self, mcp_client):
+    def __init__(self, mcp_client, config: AppConfig = None):
         self.mcp_client = mcp_client
-        self.bedrock_client = boto3.client(
-            'bedrock-runtime',
-            region_name='us-east-1'  # Claude is available in us-east-1
-        )
-        self.claude_model_id = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        self.config = config or AppConfig()
         self.event_parser = EventParser()
+        
+        # Initialize AI provider
+        try:
+            self.ai_provider = AIProviderFactory.create_provider(self.config.ai_config)
+        except Exception as e:
+            print(f"Failed to initialize AI provider: {e}")
+            self.ai_provider = None
         
     async def process_event(self, event_data: Dict[str, Any], user_prompt: str, event_format: str = "auto") -> Dict[str, Any]:
         """Process a security event using Claude 3.5 Sonnet AI reasoning"""
@@ -28,8 +32,8 @@ class EventProcessor:
         # Convert parsed event to dictionary for analysis
         event_attributes = parsed_event.to_dict()
         
-        # Use Claude to analyze event and prompt to determine actions
-        analysis = await self.analyze_with_claude(event_data, event_attributes, user_prompt)
+        # Use AI provider to analyze event and prompt to determine actions
+        analysis = await self.analyze_with_ai(event_data, event_attributes, user_prompt)
         
         # Execute determined actions
         results = await self.execute_actions(event_data, analysis)
@@ -44,45 +48,60 @@ class EventProcessor:
             "original_format": event_format
         }
         
-    async def analyze_with_claude(self, event_data: Dict[str, Any], event_attributes: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
-        """Use Claude 3.5 Sonnet to analyze event and determine actions"""
-        
-        # Prepare the prompt for Claude
-        claude_prompt = self.build_claude_prompt(event_data, event_attributes, user_prompt)
+    async def analyze_with_ai(self, event_data: Dict[str, Any], event_attributes: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
+        """Use configured AI provider to analyze event and determine actions"""
         
         try:
-            # Call Claude via AWS Bedrock
-            response = self.bedrock_client.invoke_model(
-                modelId=self.claude_model_id,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 3000,
-                    "temperature": 0.1,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": claude_prompt
-                        }
-                    ]
-                })
-            )
-            
-            # Parse Claude's response
-            response_body = json.loads(response['body'].read())
-            claude_analysis = response_body['content'][0]['text']
-            
-            # Parse Claude's structured response
-            analysis = self.parse_claude_response(claude_analysis, event_attributes)
-            
-            return analysis
-            
+            if self.ai_provider and self.ai_provider.is_available():
+                # Use configured AI provider
+                analysis = await self.ai_provider.analyze_security_event(event_data, user_prompt)
+                
+                # Convert AI provider response to expected format
+                return self.convert_ai_response_to_analysis(analysis, event_attributes)
+            else:
+                # Fallback to rule-based analysis
+                print(f"AI provider not available, falling back to rule-based analysis")
+                return self.fallback_analysis(event_attributes, user_prompt)
+                
         except Exception as e:
-            # Fallback to rule-based analysis if Claude fails
-            print(f"Claude analysis failed: {e}, falling back to rule-based analysis")
-            return self.fallback_analysis(event_attributes, user_prompt)
+            # Fallback to rule-based analysis if AI provider fails
+            print(f"AI analysis failed: {e}, falling back to rule-based analysis")
+            if self.config.ai_config.get("fallback_to_rules", True):
+                return RuleBasedFallback.analyze_security_event(event_data, user_prompt)
+            else:
+                raise
     
+    def convert_ai_response_to_analysis(self, ai_response: Dict[str, Any], event_attributes: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert AI provider response to expected analysis format"""
+        # Map AI provider response to our expected format
+        determined_actions = []
+        
+        for i, action in enumerate(ai_response.get("actions", []), 1):
+            determined_actions.append({
+                "step": i,
+                "server": action.get("server", ""),
+                "action": action.get("action", ""),
+                "parameters": action.get("parameters", {}),
+                "priority": action.get("priority", "medium"),
+                "depends_on": action.get("depends_on"),
+                "condition": action.get("condition"),
+                "rationale": action.get("rationale", "")
+            })
+        
+        return {
+            "event_attributes": event_attributes,
+            "determined_actions": determined_actions,
+            "reasoning": ai_response.get("reasoning", ""),
+            "flow_strategy": ai_response.get("flow_strategy", ""),
+            "severity_assessment": ai_response.get("severity", "medium"),
+            "risk_indicators": ai_response.get("risk_indicators", []),
+            "expected_flow_outcomes": ai_response.get("expected_outcomes", []),
+            "recommended_follow_up": ai_response.get("recommended_follow_up", ""),
+            "ai_model": f"{self.config.ai_config.get('provider', 'unknown')}"
+        }
+
     def build_claude_prompt(self, event_data: Dict[str, Any], event_attributes: Dict[str, Any], user_prompt: str) -> str:
-        """Build a comprehensive prompt for Claude analysis"""
+        """Build a comprehensive prompt for Claude analysis (legacy method)"""
         
         prompt = f"""You are an expert cybersecurity analyst AI agent working with a Model Context Protocol (MCP) system. Your task is to analyze security events and determine which MCP servers to query based on the event data and user instructions. You can create sequential flows where one server's output feeds into another server's input.
 

@@ -59,7 +59,7 @@ def main():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n\n🛑 Stopping all servers...")
+        print("\n\n Stopping all servers...")
         for process, name in processes:
             try:
                 process.terminate()

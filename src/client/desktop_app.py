@@ -23,7 +23,7 @@ class CyberSecurityApp:
         
         self.config = AppConfig()
         self.mcp_client = MCPClient(self.config.mcp_servers)
-        self.event_processor = EventProcessor(self.mcp_client)
+        self.event_processor = EventProcessor(self.mcp_client, self.config)
         self.kafka_consumer = KafkaEventConsumer()
         
         self.audit_logs = []

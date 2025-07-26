@@ -11,7 +11,7 @@ class AppConfig:
                 "base_url": "http://0.0.0.0:8001",
                 "capabilities": ["ip_report", "domain_report"],
                 "auth_headers": {
-                    "X-API-Key": "your-virustotal-api-key"
+                    "X-API-Key": "3c7cf8a0d634251a0a1fb2a0a233a74065174eae9a264c6e0d4c16080e1c6340"
                 }
             },
             "servicenow": {
@@ -42,11 +42,20 @@ class AppConfig:
         }
         
         self.ai_config = {
-            "provider": "aws_bedrock",
-            "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
-            "region": "us-east-1",
-            "max_tokens": 2000,
-            "temperature": 0.1,
+            "provider": "aws_bedrock",  # Options: "aws_bedrock", "google_vertex"
+            "aws_bedrock": {
+                "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "region": "us-east-1",
+                "max_tokens": 2000,
+                "temperature": 0.1
+            },
+            "google_vertex": {
+                "model": "claude-3-5-sonnet@20241022",
+                "project_id": "your-gcp-project-id",
+                "location": "us-central1",
+                "max_tokens": 2000,
+                "temperature": 0.1
+            },
             "fallback_to_rules": True
         }
         
