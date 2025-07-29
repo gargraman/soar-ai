@@ -49,7 +49,7 @@ class AppConfig:
         }
         
         self.ai_config = {
-            "provider": "aws_bedrock",  # Options: "aws_bedrock", "google_vertex"
+            "provider": "aws_bedrock",  # Options: "aws_bedrock", "google_vertex", "google_vertex_gemini"
             "aws_bedrock": {
                 "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
                 "region": "us-east-1",
@@ -62,6 +62,15 @@ class AppConfig:
                 "location": "us-central1",
                 "max_tokens": 2000,
                 "temperature": 0.1
+            },
+            "google_vertex_gemini": {
+                "model": "gemini-1.5-pro",
+                "project_id": "your-gcp-project-id",
+                "location": "us-central1",
+                "max_tokens": 2000,
+                "temperature": 0.1,
+                "top_p": 0.8,
+                "top_k": 40
             },
             "fallback_to_rules": True
         }

@@ -220,12 +220,110 @@ Please analyze this security event and provide recommendations."""
         except Exception:
             return False
 
+class GoogleVertexGeminiProvider(AIProvider):
+    """Google Vertex AI Gemini implementation using vertexai.generative_models"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self._model = None
+        
+    def _get_model(self):
+        """Initialize Vertex AI Gemini model lazily"""
+        if self._model is None:
+            try:
+                import vertexai
+                from vertexai.generative_models import GenerativeModel, GenerationConfig
+                
+                # Initialize Vertex AI
+                vertexai.init(
+                    project=self.config.get('project_id'),
+                    location=self.config.get('location', 'us-central1')
+                )
+                
+                # Create model instance
+                self._model = GenerativeModel(
+                    model_name=self.config.get('model', 'gemini-1.5-pro'),
+                    generation_config=GenerationConfig(
+                        max_output_tokens=self.config.get('max_tokens', 2000),
+                        temperature=self.config.get('temperature', 0.1),
+                        top_p=self.config.get('top_p', 0.8),
+                        top_k=self.config.get('top_k', 40)
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize Vertex AI Gemini model: {e}")
+                raise
+        return self._model
+    
+    async def analyze_security_event(self, event_data: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
+        """Analyze security event using Google Vertex AI Gemini"""
+        try:
+            model = self._get_model()
+            
+            system_prompt = """You are a cybersecurity expert analyzing security events and determining appropriate response actions.
+
+Available MCP servers and their capabilities:
+1. VirusTotal (virustotal): IP reputation, domain reputation, file analysis
+2. ServiceNow (servicenow): Create incidents, manage tickets, track responses
+3. CyberReason (cyberreason): Endpoint investigation, threat hunting, host analysis
+4. Custom REST (custom_rest): Generic API integration for custom threat intelligence
+
+Analyze the security event and user prompt to determine:
+1. What actions should be taken
+2. Which MCP servers to use
+3. Priority and severity assessment
+4. Detailed reasoning for decisions
+
+Return a JSON response with:
+- actions: List of recommended actions with server and parameters
+- reasoning: Explanation of decision process
+- severity: Event severity (low/medium/high/critical)
+- priority: Response priority (1-5)"""
+
+            user_message = f"""Security Event Data:
+{json.dumps(event_data, indent=2)}
+
+User Prompt: {user_prompt}
+
+Please analyze this security event and provide recommendations."""
+
+            # Combine system prompt and user message for Gemini
+            full_prompt = f"{system_prompt}\n\nUser Request:\n{user_message}"
+            
+            response = model.generate_content(full_prompt)
+            content = response.text
+            
+            # Try to parse JSON response
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # If not JSON, wrap in a basic structure
+                return {
+                    "actions": [],
+                    "reasoning": content,
+                    "severity": "medium",
+                    "priority": 3
+                }
+                
+        except Exception as e:
+            logger.error(f"Google Vertex AI Gemini analysis failed: {e}")
+            raise
+    
+    def is_available(self) -> bool:
+        """Check if Google Vertex AI Gemini is properly configured"""
+        try:
+            model = self._get_model()
+            return True
+        except Exception:
+            return False
+
 class AIProviderFactory:
     """Factory for creating AI providers"""
     
     _providers = {
         "aws_bedrock": AWSBedrockProvider,
-        "google_vertex": GoogleVertexProvider
+        "google_vertex": GoogleVertexProvider,
+        "google_vertex_gemini": GoogleVertexGeminiProvider
     }
     
     @classmethod
@@ -262,29 +360,43 @@ class RuleBasedFallback:
     
     @staticmethod
     def analyze_security_event(event_data: Dict[str, Any], user_prompt: str) -> Dict[str, Any]:
-        """Basic rule-based analysis as fallback"""
+        """Enhanced rule-based analysis as fallback, covering all MCP servers"""
         actions = []
         severity = "medium"
         priority = 3
         
-        # Extract potential IOCs
         event_str = json.dumps(event_data).lower()
         user_prompt_lower = user_prompt.lower()
         
-        # Check for IP addresses or domains for VirusTotal lookup
-        if any(field in event_data for field in ['ip', 'domain', 'src_ip', 'dst_ip']):
-            if any(keyword in user_prompt_lower for keyword in ['malicious', 'reputation', 'check', 'analyze']):
-                actions.append({
-                    "server": "virustotal",
-                    "action": "ip_report" if 'ip' in event_str else "domain_report",
-                    "parameters": event_data
-                })
+        # VirusTotal: IP/domain/file reputation or analysis
+        if any(field in event_data for field in ['ip', 'domain', 'src_ip', 'dst_ip', 'file_hash', 'hash', 'sha256', 'sha1', 'md5']):
+            if any(keyword in user_prompt_lower for keyword in ['malicious', 'reputation', 'check', 'analyze', 'scan', 'investigate']):
+                if any(field in event_data for field in ['ip', 'src_ip', 'dst_ip']):
+                    actions.append({
+                        "server": "virustotal",
+                        "action": "ip_report",
+                        "parameters": {"ip": event_data.get('ip', event_data.get('src_ip', event_data.get('dst_ip', '')))}
+                    })
+                if any(field in event_data for field in ['domain']):
+                    actions.append({
+                        "server": "virustotal",
+                        "action": "domain_report",
+                        "parameters": {"domain": event_data.get('domain', '')}
+                    })
+                if any(field in event_data for field in ['file_hash', 'hash', 'sha256', 'sha1', 'md5']):
+                    hash_val = event_data.get('file_hash') or event_data.get('hash') or event_data.get('sha256') or event_data.get('sha1') or event_data.get('md5')
+                    if hash_val:
+                        actions.append({
+                            "server": "virustotal",
+                            "action": "file_report",
+                            "parameters": {"hash": hash_val}
+                        })
         
-        # Check for high severity events that need ServiceNow tickets
-        if any(keyword in event_str for keyword in ['critical', 'high', 'malware', 'breach']):
+        # ServiceNow: Create incident/ticket for high severity
+        if any(keyword in event_str for keyword in ['critical', 'high', 'malware', 'breach', 'ransomware', 'compromised']):
             severity = "high"
             priority = 4
-            if any(keyword in user_prompt_lower for keyword in ['ticket', 'incident', 'create']):
+            if any(keyword in user_prompt_lower for keyword in ['ticket', 'incident', 'create', 'servicenow']):
                 actions.append({
                     "server": "servicenow",
                     "action": "create_record",
@@ -296,18 +408,29 @@ class RuleBasedFallback:
                     }
                 })
         
-        # Check for host-related events for CyberReason
-        if any(field in event_data for field in ['hostname', 'host', 'endpoint']):
-            if any(keyword in user_prompt_lower for keyword in ['endpoint', 'host', 'investigate']):
-                actions.append({
-                    "server": "cyberreason",
-                    "action": "get_pylum_id",
-                    "parameters": {"hostname": event_data.get('hostname', event_data.get('host', ''))}
-                })
+        # CyberReason: Endpoint/host investigation
+        if any(field in event_data for field in ['hostname', 'host', 'endpoint', 'asset', 'device']):
+            if any(keyword in user_prompt_lower for keyword in ['endpoint', 'host', 'investigate', 'threat', 'hunt', 'cyberreason']):
+                hostname = event_data.get('hostname') or event_data.get('host') or event_data.get('endpoint') or event_data.get('asset') or event_data.get('device')
+                if hostname:
+                    actions.append({
+                        "server": "cyberreason",
+                        "action": "get_pylum_id",
+                        "parameters": {"hostname": hostname}
+                    })
+        
+        # Custom REST: Generic API integration for custom threat intelligence
+        if any(keyword in user_prompt_lower for keyword in ['custom', 'rest', 'api', 'integration', 'threat intel', 'enrich']):
+            # Example: send event to custom REST API for enrichment
+            actions.append({
+                "server": "custom_rest",
+                "action": "enrich_event",
+                "parameters": event_data
+            })
         
         return {
             "actions": actions,
-            "reasoning": f"Rule-based analysis: Identified {len(actions)} recommended actions based on event attributes and user prompt keywords.",
+            "reasoning": f"Rule-based analysis: Identified {len(actions)} recommended actions for MCP servers based on event attributes and user prompt keywords.",
             "severity": severity,
             "priority": priority,
             "fallback_used": True
