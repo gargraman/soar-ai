@@ -1,0 +1,75 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # MCP Servers
+  - job_name: 'mcp-virustotal'
+    static_configs:
+      - targets: ['mcp-servers:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'mcp-servicenow'
+    static_configs:
+      - targets: ['mcp-servers:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'mcp-cyberreason'
+    static_configs:
+      - targets: ['mcp-servers:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'mcp-custom-rest'
+    static_configs:
+      - targets: ['mcp-servers:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'mcp-cloud-ivx'
+    static_configs:
+      - targets: ['mcp-servers:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Nginx metrics (if nginx-prometheus-exporter is configured)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 30s
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Docker container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+  # Application-specific metrics
+  - job_name: 'ai-soar-app'
+    static_configs:
+      - targets: ['mcp-servers:9090']
+    metrics_path: '/app-metrics'
+    scrape_interval: 60s
+    scrape_timeout: 30s

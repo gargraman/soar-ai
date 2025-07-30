@@ -4,24 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an AI-driven cybersecurity automation platform using the Model Context Protocol (MCP). The system consists of a desktop GUI client that processes security events and routes them to various MCP servers for threat intelligence, incident management, and endpoint investigation.
+This is an AI-driven cybersecurity automation platform using the Model Context Protocol (MCP). The system supports both desktop and web-based clients that process security events and route them to various MCP servers for threat intelligence, incident management, and endpoint investigation.
 
 ## Architecture
 
 The project follows a client-server architecture:
 
-- **Desktop Client** (`src/client/`): Tkinter GUI application with AI-powered event processing
-- **MCP Servers** (`src/servers/`): Four FastAPI servers providing cybersecurity services
+- **Desktop Client** (`src/client/desktop_app.py`): Tkinter GUI application with AI-powered event processing  
+- **Web Client** (`src/client/web_app.py`): FastAPI web application with HTML interface
+- **MCP Servers** (`src/servers/`): Five FastAPI servers providing cybersecurity services
 - **Event Processing**: Claude 3.5 Sonnet via AWS Bedrock for intelligent analysis and routing
 - **Configuration**: Centralized settings in `src/config/settings.py`
 
 ### Key Components
 
 - `main.py`: Entry point for the desktop application
-- `launch_servers.py`: Utility to start all MCP servers simultaneously
+- `web_main.py`: Entry point for the web application
+- `launch_servers.py`: Utility to start all MCP servers simultaneously  
+- `launch_web_app.py`: Utility to start all MCP servers and web application
 - `src/client/desktop_app.py`: Main GUI application with event upload and processing
+- `src/client/web_app.py`: FastAPI web application with HTML interface
 - `src/client/event_processor.py`: AI-powered event analysis and MCP server routing
 - `src/client/mcp_client.py`: HTTP client for communicating with MCP servers
+- `src/client/bucket_client.py`: S3 bucket operations for automated file processing
+- `src/client/bucket_monitor.py`: Background service for monitoring bucket changes
 
 ### MCP Servers
 
@@ -34,6 +40,8 @@ The project follows a client-server architecture:
 ## Common Development Commands
 
 ### Starting the Application
+
+#### Desktop Application (Original)
 ```bash
 # Start all MCP servers
 python launch_servers.py
@@ -41,6 +49,17 @@ python launch_servers.py
 # Run the desktop application (in a separate terminal)
 python main.py
 ```
+
+#### Web Application (New)
+```bash
+# Start all MCP servers and web application together
+python launch_web_app.py
+
+# Or start web application only (after starting MCP servers separately)
+python web_main.py
+```
+
+The web application runs on `http://localhost:8080` and provides the same functionality as the desktop version through a modern web interface.
 
 ### Testing
 ```bash
@@ -67,6 +86,20 @@ pytest tests/test_servers/
 pytest --maxfail=5
 ```
 
+### Individual Server Testing
+```bash
+# Test individual servers (start them first)
+python src/servers/virustotal_server.py     # Port 8001
+python src/servers/servicenow_server.py     # Port 8002
+python src/servers/cyberreason_server.py    # Port 8003
+python src/servers/custom_rest_server.py    # Port 8004
+python src/servers/cloud_ivx_server.py      # Port 8005
+
+# Test server endpoints with curl
+curl http://0.0.0.0:8001/meta              # Get server capabilities
+curl http://0.0.0.0:8001/docs               # View OpenAPI docs
+```
+
 ### Dependencies
 ```bash
 # Install dependencies
@@ -80,11 +113,13 @@ pip install -r requirements.txt -r tests/requirements.txt
 ```
 
 ### Working Directory Context
-When working on MCP servers, note that you're currently in `/src/servers/`. Key files are:
-- Project root: `../../` (contains main.py, launch_servers.py, requirements.txt)
-- Client code: `../client/` 
-- Configuration: `../config/settings.py`
-- Tests: `../../tests/`
+The project root directory contains the main entry points. Key file locations:
+- Project root: `/` (contains main.py, launch_servers.py, requirements.txt)
+- Client code: `src/client/` (desktop_app.py, event_processor.py, mcp_client.py, ai_provider.py)
+- Server code: `src/servers/` (virustotal_server.py, servicenow_server.py, etc.)
+- Configuration: `src/config/settings.py`
+- Tests: `tests/` (test_client/, test_servers/, test_integration/)
+- Sample data: `sample_data/` (security_events.json, mixed_format_events.json)
 
 ## Configuration
 
@@ -94,6 +129,7 @@ Edit `src/config/settings.py` to modify:
 - Authentication headers for external APIs
 - AI model configuration (AWS Bedrock/Claude settings)
 - Kafka configuration for streaming events
+- S3 bucket configuration for automated file processing
 
 ### Authentication Setup
 Each MCP server requires specific authentication:
@@ -110,13 +146,14 @@ The system supports multiple AI providers for event analysis:
 ### Supported Providers
 1. **AWS Bedrock** (default): Claude 3.5 Sonnet via AWS Bedrock
 2. **Google Vertex AI**: Claude 3.5 Sonnet via Google Cloud Vertex AI
+3. **Google Vertex AI Gemini**: Gemini 1.5 Pro via Google Cloud Vertex AI
 
 ### Provider Configuration
 Edit `src/config/settings.py` to select AI provider:
 
 ```python
 ai_config = {
-    "provider": "aws_bedrock",  # or "google_vertex"
+    "provider": "aws_bedrock",  # Options: "aws_bedrock", "google_vertex", "google_vertex_gemini"
     "aws_bedrock": {
         "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "region": "us-east-1",
@@ -130,6 +167,15 @@ ai_config = {
         "max_tokens": 2000,
         "temperature": 0.1
     },
+    "google_vertex_gemini": {
+        "model": "gemini-1.5-pro",
+        "project_id": "your-gcp-project-id",
+        "location": "us-central1",
+        "max_tokens": 2000,
+        "temperature": 0.1,
+        "top_p": 0.8,
+        "top_k": 40
+    },
     "fallback_to_rules": True
 }
 ```
@@ -137,6 +183,38 @@ ai_config = {
 ### Authentication Setup
 - **AWS Bedrock**: Configure AWS credentials (`aws configure` or IAM roles)
 - **Google Vertex AI**: Set up Google Cloud credentials and enable Vertex AI API
+- **Google Vertex AI Gemini**: Same as Google Vertex AI, uses Gemini models instead of Claude
+
+### S3 Bucket Configuration
+
+The system now supports automated processing of security event files uploaded to S3:
+
+```python
+bucket_config = {
+    "bucket_name": "ai-soar",
+    "region": "us-east-1", 
+    "unprocessed_prefix": "unprocessed/",
+    "processed_prefix": "processed/",
+    "check_interval": 30  # seconds for monitoring
+}
+```
+
+#### Bucket Structure
+- **unprocessed/**: Upload security event files here for processing
+- **processed/**: Original files moved here after processing
+- **processed/results/**: Processing results stored as JSON files
+
+#### Supported File Formats
+- JSON files (.json): Security events as JSON objects or arrays
+- CSV files (.csv): Tabular security event data
+- Log files (.log, .syslog): Line-based log entries
+
+#### Usage Workflow
+1. Upload security event files to `s3://ai-soar/unprocessed/`
+2. Files are automatically detected and processed
+3. Original files moved to `processed/` folder with timestamp
+4. Processing results saved to `processed/results/` folder
+5. Real-time status updates via WebSocket (web interface)
 
 ## Event Processing Logic
 
@@ -181,8 +259,8 @@ Test the application with provided sample files:
 ### Development Workflow
 1. Make changes to relevant files
 2. Run tests with `python run_tests.py` or `pytest`
-3. Test servers individually by starting them with `python <server_name>.py`
-4. Test full system by running `python ../../launch_servers.py` then `python ../../main.py`
+3. Test servers individually by starting them with `python src/servers/<server_name>.py`
+4. Test full system by running `python launch_servers.py` then `python main.py`
 
 ## Extending the System
 

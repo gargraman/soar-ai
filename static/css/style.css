@@ -1,0 +1,251 @@
+/* Custom styles for the cybersecurity web app */
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+/* Results container styling */
+.results-container {
+    max-height: 600px;
+    overflow-y: auto;
+    background-color: #ffffff;
+}
+
+.result-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    background-color: #ffffff;
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.result-item:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.result-header {
+    background-color: #f8f9fa;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.result-content {
+    padding: 1rem;
+}
+
+.result-json {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Audit container styling */
+.audit-container {
+    max-height: 600px;
+    overflow-y: auto;
+    background-color: #ffffff;
+}
+
+.audit-log {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.audit-entry {
+    margin-bottom: 0.25rem;
+    padding: 0.25rem 0;
+    color: #495057;
+}
+
+.audit-entry:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.025);
+}
+
+/* Status indicator */
+#status-indicator {
+    font-weight: 500;
+}
+
+#status-indicator .fa-circle {
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+}
+
+/* Progress styling */
+.progress {
+    height: 1.5rem;
+}
+
+.progress-bar {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Button styling */
+.btn {
+    font-weight: 500;
+    border-radius: 0.375rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Form styling */
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Tab styling */
+.nav-tabs .nav-link {
+    font-weight: 500;
+    color: #495057;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #ffffff;
+    border-color: #dee2e6 #dee2e6 #ffffff;
+    color: #0d6efd;
+}
+
+/* Toast styling */
+.toast {
+    min-width: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .col-md-3, .col-md-9 {
+        margin-bottom: 1rem;
+    }
+    
+    .results-container, .audit-container {
+        max-height: 400px;
+    }
+}
+
+/* Loading animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status colors */
+.status-ready { color: #198754 !important; }
+.status-processing { color: #fd7e14 !important; }
+.status-error { color: #dc3545 !important; }
+.status-complete { color: #0d6efd !important; }
+
+/* Syntax highlighting for JSON */
+.json-key {
+    color: #0969da;
+    font-weight: 600;
+}
+
+.json-string {
+    color: #0a3069;
+}
+
+.json-number {
+    color: #953800;
+}
+
+.json-boolean {
+    color: #8250df;
+}
+
+.json-null {
+    color: #656d76;
+}
+
+/* Event severity indicators */
+.severity-low {
+    border-left: 4px solid #198754;
+}
+
+.severity-medium {
+    border-left: 4px solid #fd7e14;
+}
+
+.severity-high {
+    border-left: 4px solid #dc3545;
+}
+
+.severity-critical {
+    border-left: 4px solid #6f42c1;
+}
+
+/* File upload area */
+.file-drop-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.file-drop-area:hover,
+.file-drop-area.drag-over {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Configuration display */
+#configDisplay {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    max-height: 500px;
+    overflow-y: auto;
+    color: #495057;
+}

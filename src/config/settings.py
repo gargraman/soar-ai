@@ -75,12 +75,21 @@ class AppConfig:
             "fallback_to_rules": True
         }
         
+        self.bucket_config = {
+            "bucket_name": "ai-soar",
+            "region": "us-east-1",
+            "unprocessed_prefix": "unprocessed/",
+            "processed_prefix": "processed/",
+            "check_interval": 30  # seconds
+        }
+        
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
             "mcp_servers": self.mcp_servers,
             "kafka_config": self.kafka_config,
-            "ai_config": self.ai_config
+            "ai_config": self.ai_config,
+            "bucket_config": self.bucket_config
         }
         
     def save_to_file(self, file_path: str):
@@ -98,6 +107,7 @@ class AppConfig:
                 config.mcp_servers = data.get("mcp_servers", config.mcp_servers)
                 config.kafka_config = data.get("kafka_config", config.kafka_config)
                 config.ai_config = data.get("ai_config", config.ai_config)
+                config.bucket_config = data.get("bucket_config", config.bucket_config)
         except FileNotFoundError:
             pass  # Use default configuration
         return config

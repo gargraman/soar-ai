@@ -1,0 +1,78 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # MCP Servers - Development overrides
+  mcp-servers:
+    environment:
+      - GOOGLE_CLOUD_PROJECT=svc-hackathon-prod07
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/service-account.json
+      - AI_PROVIDER=google_vertex_gemini
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../logs:/app/logs
+      - ../data:/app/data
+      - ./config:/app/config
+      - ./secrets:/app/secrets:ro
+      - ../src:/app/src  # Live reload for source code
+      - ../sample_data:/app/sample_data
+    command: ["python", "-m", "src.deployment.start_servers", "--reload"]
+
+  # Web Application - Development overrides
+  web-app:
+    environment:
+      - GOOGLE_CLOUD_PROJECT=svc-hackathon-prod07
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/service-account.json
+      - AI_PROVIDER=google_vertex_gemini
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+    volumes:
+      - ../logs:/app/logs
+      - ../data:/app/data
+      - ./config:/app/config
+      - ./secrets:/app/secrets:ro
+      - ../static:/app/static
+      - ../templates:/app/templates
+      - ../src:/app/src  # Live reload for source code
+      - ../sample_data:/app/sample_data
+    command: ["python", "web_main.py", "--reload"]
+
+  # Development database (optional)
+  dev-db:
+    image: postgres:15-alpine
+    container_name: dev-postgres
+    environment:
+      - POSTGRES_DB=ai_soar_dev
+      - POSTGRES_USER=soar_user
+      - POSTGRES_PASSWORD=dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - ai-soar-network
+    restart: unless-stopped
+
+  # Development Redis (for caching/sessions)
+  dev-redis:
+    image: redis:7-alpine
+    container_name: dev-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - dev-redis-data:/data
+    networks:
+      - ai-soar-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+volumes:
+  dev-db-data:
+  dev-redis-data:

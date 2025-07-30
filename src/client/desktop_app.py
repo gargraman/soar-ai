@@ -11,6 +11,7 @@ from typing import Dict, List, Any, Optional
 from .event_processor import EventProcessor
 from .mcp_client import MCPClient
 from .kafka_consumer import KafkaEventConsumer
+from .bucket_client import BucketClient
 from ..config.settings import AppConfig
 
 class CyberSecurityApp:
@@ -25,6 +26,7 @@ class CyberSecurityApp:
         self.mcp_client = MCPClient(self.config.mcp_servers)
         self.event_processor = EventProcessor(self.mcp_client, self.config)
         self.kafka_consumer = KafkaEventConsumer()
+        self.bucket_client = BucketClient(self.config.bucket_config)
         
         self.audit_logs = []
         self.setup_ui()
@@ -75,6 +77,16 @@ class CyberSecurityApp:
                   command=self.start_kafka_consumer).pack(side='left', padx=5)
         ttk.Button(kafka_frame, text="Stop Kafka Consumer", 
                   command=self.stop_kafka_consumer).pack(side='left', padx=5)
+        
+        # Bucket processing section
+        bucket_frame = ttk.LabelFrame(frame, text="S3 Bucket Processing", padding=10)
+        bucket_frame.pack(fill='x', padx=10, pady=5)
+        
+        ttk.Label(bucket_frame, text=f"Bucket: {self.config.bucket_config['bucket_name']}").pack(side='left')
+        ttk.Button(bucket_frame, text="Process Bucket Files", 
+                  command=self.process_bucket_files).pack(side='left', padx=5)
+        ttk.Button(bucket_frame, text="Check Bucket Status", 
+                  command=self.check_bucket_status).pack(side='left', padx=5)
         
         # User prompt section
         prompt_frame = ttk.LabelFrame(frame, text="AI Prompt", padding=10)
@@ -274,6 +286,77 @@ class CyberSecurityApp:
             with open(file_path, 'w') as f:
                 f.write("\n".join(self.audit_logs))
             messagebox.showinfo("Success", f"Audit log exported to {file_path}")
+    
+    def process_bucket_files(self):
+        """Process all unprocessed files in S3 bucket"""
+        prompt = self.prompt_text.get('1.0', tk.END).strip()
+        if not prompt:
+            messagebox.showerror("Error", "Please enter a prompt")
+            return
+        
+        # Process in background thread to avoid blocking UI
+        threading.Thread(target=self._process_bucket_files_async, args=(prompt,), daemon=True).start()
+        messagebox.showinfo("Info", "Started processing files from S3 bucket")
+    
+    def _process_bucket_files_async(self, prompt):
+        """Process bucket files asynchronously"""
+        try:
+            self.log_audit("Starting S3 bucket file processing")
+            
+            # Process files from bucket
+            results = asyncio.run(self.bucket_client.process_bucket_files(self.event_processor, prompt))
+            
+            if not results:
+                self.log_audit("No unprocessed files found in bucket")
+                return
+            
+            # Display results
+            for result in results:
+                self.display_result(
+                    f"Bucket File: {result['original_file']}", 
+                    {
+                        'events_processed': result['events_processed'],
+                        'processed_key': result['processed_key'],
+                        'results_key': result['results_key'],
+                        'summary': f"Processed {result['events_processed']} events"
+                    }
+                )
+            
+            self.log_audit(f"Completed processing {len(results)} files from bucket")
+            
+        except Exception as e:
+            error_msg = f"Failed to process bucket files: {str(e)}"
+            self.log_audit(error_msg)
+            messagebox.showerror("Error", error_msg)
+    
+    def check_bucket_status(self):
+        """Check bucket status and list unprocessed files"""
+        threading.Thread(target=self._check_bucket_status_async, daemon=True).start()
+    
+    def _check_bucket_status_async(self):
+        """Check bucket status asynchronously"""
+        try:
+            # Get list of unprocessed files
+            unprocessed_files = asyncio.run(self.bucket_client.list_unprocessed_files())
+            
+            if not unprocessed_files:
+                self.log_audit("No unprocessed files found in bucket")
+                messagebox.showinfo("Bucket Status", "No unprocessed files found in bucket")
+                return
+            
+            # Display file information
+            status_info = f"Found {len(unprocessed_files)} unprocessed files:\n\n"
+            for file_info in unprocessed_files:
+                status_info += f"• {file_info['filename']} ({file_info['size']} bytes)\n"
+                status_info += f"  Last modified: {file_info['last_modified']}\n\n"
+            
+            self.log_audit(f"Bucket status: {len(unprocessed_files)} unprocessed files")
+            messagebox.showinfo("Bucket Status", status_info)
+            
+        except Exception as e:
+            error_msg = f"Failed to check bucket status: {str(e)}"
+            self.log_audit(error_msg)
+            messagebox.showerror("Error", error_msg)
             
     def run(self):
         """Start the application"""
