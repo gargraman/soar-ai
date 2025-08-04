@@ -4,271 +4,437 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an AI-driven cybersecurity automation platform using the Model Context Protocol (MCP). The system supports both desktop and web-based clients that process security events and route them to various MCP servers for threat intelligence, incident management, and endpoint investigation.
+This is an AI-driven cybersecurity automation platform using the Model Context Protocol (MCP). The system processes security events through AI-powered analysis and routes them to specialized MCP servers for threat intelligence, incident management, and endpoint investigation. It supports both desktop (Tkinter) and web (FastAPI) interfaces with Kafka streaming, S3 automation, and multi-cloud AI provider support.
 
 ## Architecture
 
-The project follows a client-server architecture:
+The system uses a **client-server architecture** with AI-driven event processing:
 
-- **Desktop Client** (`src/client/desktop_app.py`): Tkinter GUI application with AI-powered event processing  
-- **Web Client** (`src/client/web_app.py`): FastAPI web application with HTML interface
-- **MCP Servers** (`src/servers/`): Five FastAPI servers providing cybersecurity services
-- **Event Processing**: Claude 3.5 Sonnet via AWS Bedrock for intelligent analysis and routing
-- **Configuration**: Centralized settings in `src/config/settings.py`
+```
+Event Input → AI Analysis → MCP Server Routing → Cybersecurity Actions
+    ↓             ↓              ↓                    ↓
+File/Kafka   EventProcessor   HTTP Client        VirusTotal/ServiceNow/etc
+```
 
-### Key Components
+### Core Components Architecture
 
-- `main.py`: Entry point for the desktop application
-- `web_main.py`: Entry point for the web application
-- `launch_servers.py`: Utility to start all MCP servers simultaneously  
-- `launch_web_app.py`: Utility to start all MCP servers and web application
-- `src/client/desktop_app.py`: Main GUI application with event upload and processing
-- `src/client/web_app.py`: FastAPI web application with HTML interface
-- `src/client/event_processor.py`: AI-powered event analysis and MCP server routing
-- `src/client/mcp_client.py`: HTTP client for communicating with MCP servers
-- `src/client/bucket_client.py`: S3 bucket operations for automated file processing
-- `src/client/bucket_monitor.py`: Background service for monitoring bucket changes
+- **Event Processing Pipeline**: 
+  - `EventParser` → standardizes events into `SecurityEventTaxonomy`
+  - `EventProcessor` → AI-powered analysis and action determination  
+  - `MCPClient` → HTTP communication with MCP servers
+  - `AIProvider` → abstraction layer supporting AWS Bedrock, Google Vertex AI, Gemini
 
-### MCP Servers
+- **Client Applications**:
+  - Desktop: Tkinter GUI (`src/client/desktop_app.py`)
+  - Web: FastAPI app (`src/client/web_app.py`) with WebSocket support
+  - Both share the same `EventProcessor` core
 
-1. **VirusTotal Server** (port 8001): IP/domain reputation lookups
-2. **ServiceNow Server** (port 8002): Incident and task management
-3. **CyberReason Server** (port 8003): Endpoint status and threat detection
-4. **Custom REST Server** (port 8004): Generic REST API wrapper
-5. **Trellix Cloud IVX Server** (port 8005): File/URL malware analysis and threat intelligence
+- **MCP Server Ecosystem**: 5 FastAPI servers (ports 8001-8005) with `/meta` capability discovery
+
+### AI Provider Abstraction
+
+The system supports multiple AI providers through `AIProviderFactory`:
+- **AWS Bedrock**: Claude 3.5 Sonnet (default)
+- **Google Vertex AI**: Claude 3.5 Sonnet 
+- **Google Vertex AI Gemini**: Gemini 1.5 Pro
+- **Rule-based fallback** when AI providers fail
+
+## Development Environment Setup
+
+### Package Management
+
+This project uses **UV** as the Python package manager alongside traditional pip:
+
+```bash
+# UV is the modern Python package manager (faster than pip)
+# Install dependencies with UV (if available)
+uv pip install -r requirements.txt
+uv pip install -e .                             # Install in development mode
+
+# Traditional pip installation (fallback)
+pip install -r requirements.txt
+pip install -e .
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# OR
+venv\Scripts\activate     # Windows
+```
+
+### Environment Variables
+
+Key environment variables for configuration:
+```bash
+# AWS Bedrock (primary AI provider)
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_ACCESS_KEY_ID=your_key
+export AWS_SECRET_ACCESS_KEY=your_secret
+
+# Google Vertex AI (alternative provider)
+export GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
+export GCP_PROJECT_ID=your-project-id
+
+# Debug mode
+export DEBUG=1                                   # Enable detailed logging
+export PYTHONPATH=.                             # For local development
+```
 
 ## Common Development Commands
 
 ### Starting the Application
 
-#### Desktop Application (Original)
 ```bash
-# Start all MCP servers
-python launch_servers.py
+# Desktop application (full workflow)
+python launch_servers.py    # Start all MCP servers (ports 8001-8005)
+python main.py              # Start Tkinter GUI (separate terminal)
 
-# Run the desktop application (in a separate terminal)
-python main.py
+# Web application (integrated)
+python launch_web_app.py    # Start servers + web app together
+# OR
+python web_main.py          # Web app only (if servers already running)
+
+# Individual server testing
+python src/servers/virustotal_server.py  # Port 8001
+python src/servers/servicenow_server.py  # Port 8002
+# ... etc for ports 8003-8005
 ```
 
-#### Web Application (New)
-```bash
-# Start all MCP servers and web application together
-python launch_web_app.py
+The web application runs on `http://localhost:8080` with WebSocket support for real-time updates.
 
-# Or start web application only (after starting MCP servers separately)
-python web_main.py
-```
+### Web Application Features
 
-The web application runs on `http://localhost:8080` and provides the same functionality as the desktop version through a modern web interface.
+The FastAPI web app (`src/client/web_app.py`) provides:
+- **File Upload Interface**: Drag-and-drop for JSON/CSV event files
+- **Real-time Processing**: WebSocket updates during event analysis
+- **AI Chat Interface**: Natural language prompts with streaming responses
+- **S3 Integration**: Automatic bucket monitoring and file processing
+- **Event History**: View past analyses and results
+- **API Documentation**: Auto-generated docs at `http://localhost:8080/docs`
 
 ### Testing
+
 ```bash
-# Run all tests using the test runner (recommended)
+# Run all tests (recommended)
 python run_tests.py
 
-# Run all tests directly with pytest
-pytest
+# Pytest options
+pytest                                           # All tests
+pytest -v                                        # Verbose output
+pytest -m unit                                   # Unit tests only
+pytest -m integration                            # Integration tests only
+pytest tests/test_client/test_event_processor.py # Specific file
+pytest tests/test_servers/                       # Specific directory
+pytest --maxfail=5                              # Stop after 5 failures
 
-# Run with verbose output
-pytest -v
-
-# Run specific test types
-pytest -m unit          # Unit tests only
-pytest -m integration   # Integration tests only
-
-# Run specific test file
-pytest tests/test_client/test_event_processor.py
-
-# Run tests in a specific directory
-pytest tests/test_servers/
-
-# Run tests with maximum failures limit
-pytest --maxfail=5
+# Test with async support (configured in pytest.ini)
+pytest --asyncio-mode=auto                      # Explicit async mode
 ```
 
-### Individual Server Testing
+### Code Quality and Linting
+
 ```bash
-# Test individual servers (start them first)
-python src/servers/virustotal_server.py     # Port 8001
-python src/servers/servicenow_server.py     # Port 8002
-python src/servers/cyberreason_server.py    # Port 8003
-python src/servers/custom_rest_server.py    # Port 8004
-python src/servers/cloud_ivx_server.py      # Port 8005
+# This project currently uses basic Python standards
+# No specific linting tools (ruff, black, flake8) are configured
+# When adding code quality tools, consider:
 
-# Test server endpoints with curl
-curl http://0.0.0.0:8001/meta              # Get server capabilities
-curl http://0.0.0.0:8001/docs               # View OpenAPI docs
+# Install and run ruff (recommended for new Python projects)
+pip install ruff
+ruff check .                                     # Check for issues
+ruff format .                                    # Format code
+
+# Install and run black (Python formatter)
+pip install black
+black .                                          # Format all Python files
+
+# Install and run mypy (type checking)
+pip install mypy
+mypy src/                                        # Type check source code
 ```
 
-### Dependencies
+### Server Testing and API Validation
+
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Install test dependencies
-pip install -r tests/requirements.txt
-
-# Install all dependencies (main + test)
-pip install -r requirements.txt -r tests/requirements.txt
+# Test server endpoints (ensure servers are running first)
+curl http://0.0.0.0:8001/meta                   # Get capabilities
+curl http://0.0.0.0:8001/docs                   # OpenAPI documentation
+curl -H "X-API-Key: test" -X POST http://0.0.0.0:8001/ip_report \
+  -d '{"ip": "8.8.8.8"}'                        # Test VirusTotal endpoint
 ```
 
-### Working Directory Context
-The project root directory contains the main entry points. Key file locations:
-- Project root: `/` (contains main.py, launch_servers.py, requirements.txt)
-- Client code: `src/client/` (desktop_app.py, event_processor.py, mcp_client.py, ai_provider.py)
-- Server code: `src/servers/` (virustotal_server.py, servicenow_server.py, etc.)
-- Configuration: `src/config/settings.py`
-- Tests: `tests/` (test_client/, test_servers/, test_integration/)
-- Sample data: `sample_data/` (security_events.json, mixed_format_events.json)
+### GCP Deployment
 
-## Configuration
+```bash
+# Simple deployment for development/testing
+./scripts/deploy_to_gcp.sh                      # Deploy to GCP VM
 
-### MCP Server Configuration
-Edit `src/config/settings.py` to modify:
-- Server URLs and ports
-- Authentication headers for external APIs
-- AI model configuration (AWS Bedrock/Claude settings)
-- Kafka configuration for streaming events
-- S3 bucket configuration for automated file processing
+# Clean up resources when done
+./scripts/cleanup_gcp.sh                        # Remove all GCP resources
+```
 
-### Authentication Setup
-Each MCP server requires specific authentication:
-- **VirusTotal**: `X-API-Key` header
-- **ServiceNow**: `Authorization` header (Basic/Bearer)
+### Kafka/Redpanda Messaging
+
+```bash
+# Local messaging infrastructure
+./scripts/start_messaging_infra.sh              # Start Redpanda cluster
+./scripts/create_topics.sh                      # Create Kafka topics
+./scripts/publish_sample_events.sh              # Send test events
+./scripts/stop_messaging_infra.sh               # Clean shutdown
+
+# Docker Compose options
+docker-compose -f docker-compose.redpanda.yml up -d     # Redpanda only
+docker-compose -f deployment/docker-compose.minimal.yml up -d  # Essential services
+```
+
+## Configuration Architecture
+
+### Centralized Configuration (`src/config/settings.py`)
+
+The `AppConfig` class manages all system configuration:
+
+```python
+class AppConfig:
+    def __init__(self):
+        self.mcp_servers = {...}      # MCP server definitions
+        self.ai_config = {...}        # AI provider settings  
+        self.kafka_config = {...}     # Kafka/Redpanda settings
+        self.bucket_config = {...}    # S3 automation settings
+```
+
+### MCP Server Configuration Pattern
+
+Each server follows this structure in `settings.py`:
+```python
+"server_name": {
+    "base_url": "http://0.0.0.0:PORT",
+    "capabilities": ["endpoint1", "endpoint2"],  # From /meta endpoint
+    "auth_headers": {"Header-Name": "value"}
+}
+```
+
+Authentication by server type:
+- **VirusTotal/Trellix**: `X-API-Key` header
+- **ServiceNow**: `Authorization` header (Basic/Bearer)  
 - **CyberReason**: `Authorization` Bearer token
 - **Custom REST**: Configurable per API
-- **Trellix Cloud IVX**: `X-API-Key` header
 
-## AI Provider Configuration
+## AI Provider System
 
-The system supports multiple AI providers for event analysis:
+### Multi-Provider Architecture
 
-### Supported Providers
-1. **AWS Bedrock** (default): Claude 3.5 Sonnet via AWS Bedrock
-2. **Google Vertex AI**: Claude 3.5 Sonnet via Google Cloud Vertex AI
-3. **Google Vertex AI Gemini**: Gemini 1.5 Pro via Google Cloud Vertex AI
+The system uses `AIProviderFactory` to create provider instances:
+- **AWS Bedrock**: Claude 3.5 Sonnet (default)
+- **Google Vertex AI**: Claude 3.5 Sonnet via GCP
+- **Google Vertex AI Gemini**: Gemini 1.5 Pro via GCP  
+- **Rule-based fallback**: When AI providers fail
 
-### Provider Configuration
-Edit `src/config/settings.py` to select AI provider:
-
+Provider selection in `settings.py`:
 ```python
 ai_config = {
-    "provider": "aws_bedrock",  # Options: "aws_bedrock", "google_vertex", "google_vertex_gemini"
-    "aws_bedrock": {
-        "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        "region": "us-east-1",
-        "max_tokens": 2000,
-        "temperature": 0.1
-    },
-    "google_vertex": {
-        "model": "claude-3-5-sonnet@20241022",
-        "project_id": "your-gcp-project-id",
-        "location": "us-central1",
-        "max_tokens": 2000,
-        "temperature": 0.1
-    },
-    "google_vertex_gemini": {
-        "model": "gemini-1.5-pro",
-        "project_id": "your-gcp-project-id",
-        "location": "us-central1",
-        "max_tokens": 2000,
-        "temperature": 0.1,
-        "top_p": 0.8,
-        "top_k": 40
-    },
-    "fallback_to_rules": True
+    "provider": "aws_bedrock",  # or "google_vertex", "google_vertex_gemini"
+    "fallback_to_rules": True,  # Enable rule-based fallback
+    # Provider-specific configs...
 }
 ```
 
-### Authentication Setup
-- **AWS Bedrock**: Configure AWS credentials (`aws configure` or IAM roles)
-- **Google Vertex AI**: Set up Google Cloud credentials and enable Vertex AI API
-- **Google Vertex AI Gemini**: Same as Google Vertex AI, uses Gemini models instead of Claude
+### AI Analysis Pipeline
 
-### S3 Bucket Configuration
+The `EventProcessor.analyze_with_ai()` method:
+1. Creates analysis prompt from event + user input
+2. Calls selected AI provider
+3. Parses AI response for MCP server actions
+4. Falls back to rules if AI fails
 
-The system now supports automated processing of security event files uploaded to S3:
+Key integration points:
+- `src/client/ai_provider.py` - Provider abstractions
+- `src/client/event_processor.py` - AI analysis logic
+- Fallback logic in `RuleBasedFallback` class
+
+## Event Processing System
+
+### SecurityEventTaxonomy Structure
+
+The `EventParser` converts various input formats into a standardized `SecurityEventTaxonomy`:
 
 ```python
-bucket_config = {
-    "bucket_name": "ai-soar",
-    "region": "us-east-1", 
-    "unprocessed_prefix": "unprocessed/",
-    "processed_prefix": "processed/",
-    "check_interval": 30  # seconds for monitoring
-}
+class SecurityEventTaxonomy:
+    # Core identification
+    event_id: str
+    timestamp: str
+    event_type: str        # malware, network_anomaly, authentication, etc
+    severity: str          # critical, high, medium, low
+    
+    # Indicators of Compromise
+    indicators: Dict       # IPs, domains, hashes, URLs
+    
+    # Asset information  
+    affected_assets: List  # hostnames, endpoints
+    
+    # Additional context
+    description: str
+    raw_data: Dict        # Original event data
 ```
 
-#### Bucket Structure
-- **unprocessed/**: Upload security event files here for processing
-- **processed/**: Original files moved here after processing
-- **processed/results/**: Processing results stored as JSON files
+### Multi-Format Input Support
 
-#### Supported File Formats
-- JSON files (.json): Security events as JSON objects or arrays
-- CSV files (.csv): Tabular security event data
-- Log files (.log, .syslog): Line-based log entries
+The system processes events from multiple sources:
+- **File uploads**: JSON, CSV, syslog formats via desktop/web UI
+- **Kafka streams**: Real-time event ingestion from topics
+- **S3 automation**: Automatic processing of uploaded files
 
-#### Usage Workflow
-1. Upload security event files to `s3://ai-soar/unprocessed/`
-2. Files are automatically detected and processed
-3. Original files moved to `processed/` folder with timestamp
-4. Processing results saved to `processed/results/` folder
-5. Real-time status updates via WebSocket (web interface)
+S3 bucket workflow (`bucket_client.py` + `bucket_monitor.py`):
+```
+s3://ai-soar/unprocessed/ → Auto-detect → Process → s3://ai-soar/processed/
+                                           ↓
+                            Real-time WebSocket updates to web UI
+```
 
-## Event Processing Logic
+## MCP Server Ecosystem
 
-The AI agent analyzes security events and user prompts to determine appropriate actions:
+### Server Pattern and `/meta` Endpoint
 
-### Decision Factors
-- **Event attributes**: IOCs (IPs, domains, hashes), hostnames, severity levels
-- **Prompt keywords**: "malicious", "ticket", "endpoint", "reputation"
+All MCP servers follow a consistent FastAPI pattern:
+
+```python
+from fastapi import FastAPI, HTTPException, Depends
+from .auth import get_auth_headers  # Custom dependency injection
+
+app = FastAPI(title="Server Name")
+
+@app.get("/meta")
+async def get_capabilities():
+    return {"capabilities": ["endpoint1", "endpoint2"], "server": "name"}
+
+@app.post("/endpoint1")  
+async def endpoint1(request: RequestModel, auth: dict = Depends(get_auth_headers)):
+    # Implementation with proper error handling
+    pass
+```
+
+Each server runs independently and exposes:
+- `/meta` - Capability discovery
+- `/docs` - Auto-generated OpenAPI documentation  
+- Custom endpoints based on cybersecurity function
+
+### Server-Specific Functions
+
+1. **VirusTotal** (8001): `ip_report`, `domain_report` - IOC reputation lookup
+2. **ServiceNow** (8002): `create_record`, `get_record` - Incident/task management
+3. **CyberReason** (8003): `get_pylum_id`, `check_terminal_status` - Endpoint investigation
+4. **Custom REST** (8004): `custom_enrichment` - Generic API wrapper with configurable endpoints
+5. **Trellix Cloud IVX** (8005): `lookup_hashes`, `analyse_url`, `analyse_file` - Advanced malware analysis and threat intelligence
+
+## Development Patterns
+
+### Async/Await Architecture
+
+The entire system is built on async patterns:
+- `EventProcessor.process_event()` - Main async processing pipeline
+- `MCPClient` methods - HTTP requests with aiohttp
+- FastAPI servers - Native async support
+- WebSocket connections - Real-time updates in web client
+
+### Error Handling Strategy
+
+Multi-layer error handling:
+1. **AI Provider fallback** - Rule-based analysis if AI fails
+2. **MCP Client retries** - HTTP request retry logic
+3. **Server-specific exceptions** - Custom error types for different failure modes
+4. **User-friendly messages** - Error translation for GUI display
+
+### Decision Logic for AI Analysis
+
+The AI analyzes events and user prompts considering:
+- **Event attributes**: IOCs, hostnames, severity levels
+- **Prompt keywords**: "malicious", "ticket", "endpoint", "reputation"  
 - **Conditional logic**: "if high severity", "if compromised"
 
-### Fallback Logic
-When no specific servers are mentioned or AI providers are unavailable:
+Fallback logic when AI unavailable:
 1. VirusTotal for IOC enrichment
-2. ServiceNow tickets for high/critical severity events
+2. ServiceNow tickets for high/critical severity
 3. CyberReason for host-related events
 
-## Sample Data
+## Sample Data and Testing
 
-Test the application with provided sample files:
-- `sample_data/security_events.json`: Comprehensive security events
-- `sample_data/security_events.csv`: Events in CSV format
-- `sample_data/mixed_format_events.json`: Mixed event types
-- `sample_data/syslog_events.log`: Syslog format events
+Test files in `sample_data/`:
+- `security_events.json` - Comprehensive security events
+- `security_events.csv` - Events in CSV format  
+- `mixed_format_events.json` - Mixed event types
+- `syslog_events.log` - Syslog format events
 
-## Development Notes
+## Troubleshooting
 
-- The application uses FastAPI for MCP servers with automatic OpenAPI documentation
-- Event parsing supports multiple formats: JSON, CSV, and syslog
-- AI analysis provides detailed reasoning and audit trails via configurable providers
-- All servers expose `/meta` endpoints for capability discovery
-- Configuration supports both file-based and environment variable loading
-- AI provider abstraction allows easy switching between AWS Bedrock and Google Vertex AI
-- Automatic fallback to rule-based analysis when AI providers are unavailable
+### Common Development Issues
 
-### Code Quality and Standards
-- All async functions use proper `async`/`await` patterns
-- FastAPI dependency injection is used for configuration and authentication
-- Tests use pytest with asyncio support and proper mocking
-- Configuration is centralized in `src/config/settings.py`
-- Error handling includes specific exceptions for different failure modes
+1. **MCP Server Connection Failures**
+   ```bash
+   # Check if all servers are running
+   curl http://localhost:8001/meta  # VirusTotal
+   curl http://localhost:8002/meta  # ServiceNow
+   curl http://localhost:8003/meta  # CyberReason
+   curl http://localhost:8004/meta  # Custom REST
+   curl http://localhost:8005/meta  # Trellix Cloud IVX
+   
+   # Restart servers if needed
+   python launch_servers.py
+   ```
 
-### Development Workflow
-1. Make changes to relevant files
-2. Run tests with `python run_tests.py` or `pytest`
-3. Test servers individually by starting them with `python src/servers/<server_name>.py`
-4. Test full system by running `python launch_servers.py` then `python main.py`
+2. **AI Provider Authentication Errors**
+   ```bash
+   # Test AWS Bedrock connection
+   python -c "from src.client.ai_provider import AWSBedrockProvider; print('AWS OK')"
+   
+   # Test Google Vertex AI connection
+   python test_vertexai.py
+   
+   # Check environment variables
+   echo $AWS_DEFAULT_REGION
+   echo $GOOGLE_APPLICATION_CREDENTIALS
+   ```
+
+3. **Async/Await Import Errors**
+   ```bash
+   # Ensure pytest-asyncio is installed
+   pip install pytest-asyncio
+   
+   # Check pytest.ini configuration
+   cat pytest.ini | grep asyncio
+   ```
+
+4. **Port Conflicts**
+   ```bash
+   # Check which ports are in use
+   lsof -i :8001-8005
+   netstat -tuln | grep -E '(8001|8002|8003|8004|8005|8080)'
+   
+   # Kill processes if needed
+   pkill -f "uvicorn.*800[1-5]"
+   ```
+
+### Integration Testing Issues
+
+- **Mock Server Responses**: Check `tests/conftest.py` for proper mock configurations
+- **Async Test Failures**: Ensure all async functions use `await` and tests are marked with `@pytest.mark.asyncio`
+- **Event Processing**: Verify `SecurityEventTaxonomy` structure matches test data
 
 ## Extending the System
 
 ### Adding New MCP Servers
-1. Create new server file in `src/servers/`
-2. Implement FastAPI endpoints with `/meta` capability endpoint
-3. Add server configuration to `src/config/settings.py`
-4. Update event processor logic if needed
 
-### Custom REST API Integration
-Use the Custom REST server to integrate any REST API by registering endpoint configurations.
+1. Create `src/servers/new_server.py` following the FastAPI pattern
+2. Add server config to `src/config/settings.py`
+3. Update `launch_servers.py` to include new server
+4. Add capability recognition in `EventProcessor` if specialized logic needed
+
+### Custom REST API Integration  
+
+The Custom REST server (`src/servers/custom_rest_server.py`) allows dynamic API registration:
+```python
+# Register new endpoint configuration
+config = {
+    "name": "threat_intel_api",
+    "base_url": "https://api.example.com",
+    "auth_headers": {"Authorization": "Bearer token"},
+    "endpoints": {...}
+}
+```

@@ -43,9 +43,28 @@ class AppConfig:
         }
         
         self.kafka_config = {
-            "bootstrap_servers": ["localhost:9092"],
+            "bootstrap_servers": ["localhost:19092", "localhost:29092", "localhost:39092"],
             "security_protocol": "PLAINTEXT",
-            "auto_offset_reset": "latest"
+            "auto_offset_reset": "latest",
+            "group_id": "ai-soar-consumer-group",
+            "enable_auto_commit": True,
+            "auto_commit_interval_ms": 1000,
+            "session_timeout_ms": 30000,
+            "heartbeat_interval_ms": 3000,
+            "max_poll_records": 500,
+            "topics": {
+                "security_events": "security-events",
+                "malware_events": "malware-events",
+                "network_events": "network-events", 
+                "endpoint_events": "endpoint-events",
+                "authentication_events": "authentication-events",
+                "enriched_events": "enriched-events",
+                "high_priority_events": "high-priority-events",
+                "analysis_results": "analysis-results",
+                "incident_updates": "incident-updates",
+                "failed_events": "failed-events",
+                "audit_trail": "audit-trail"
+            }
         }
         
         self.ai_config = {

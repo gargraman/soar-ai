@@ -106,7 +106,23 @@ Please analyze this security event and provide recommendations."""
             
             # Try to parse JSON response
             try:
-                return json.loads(content)
+                json_data = json.loads(content)
+                
+                # Normalize the response to ensure it has the expected fields
+                if isinstance(json_data, dict):
+                    # If 'actions' is missing, add an empty array
+                    if "actions" not in json_data:
+                        json_data["actions"] = []
+                        
+                    return json_data
+                else:
+                    # If the response is not a dictionary, wrap it
+                    return {
+                        "actions": [],
+                        "reasoning": str(content),
+                        "severity": "medium",
+                        "priority": 3
+                    }
             except json.JSONDecodeError:
                 # If not JSON, wrap in a basic structure
                 return {
@@ -198,7 +214,23 @@ Please analyze this security event and provide recommendations."""
             
             # Try to parse JSON response
             try:
-                return json.loads(content)
+                json_data = json.loads(content)
+                
+                # Normalize the response to ensure it has the expected fields
+                if isinstance(json_data, dict):
+                    # If 'actions' is missing, add an empty array
+                    if "actions" not in json_data:
+                        json_data["actions"] = []
+                        
+                    return json_data
+                else:
+                    # If the response is not a dictionary, wrap it
+                    return {
+                        "actions": [],
+                        "reasoning": str(content),
+                        "severity": "medium",
+                        "priority": 3
+                    }
             except json.JSONDecodeError:
                 # If not JSON, wrap in a basic structure
                 return {
@@ -295,7 +327,23 @@ Please analyze this security event and provide recommendations."""
             
             # Try to parse JSON response
             try:
-                return json.loads(content)
+                json_data = json.loads(content)
+                
+                # Normalize the response to ensure it has the expected fields
+                if isinstance(json_data, dict):
+                    # If 'actions' is missing, add an empty array
+                    if "actions" not in json_data:
+                        json_data["actions"] = []
+                        
+                    return json_data
+                else:
+                    # If the response is not a dictionary, wrap it
+                    return {
+                        "actions": [],
+                        "reasoning": str(content),
+                        "severity": "medium",
+                        "priority": 3
+                    }
             except json.JSONDecodeError:
                 # If not JSON, wrap in a basic structure
                 return {

@@ -76,7 +76,21 @@ class EventProcessor:
         # Map AI provider response to our expected format
         determined_actions = []
         
-        for i, action in enumerate(ai_response.get("actions", []), 1):
+        # Ensure ai_response is a dictionary
+        if not isinstance(ai_response, dict):
+            ai_response = {"actions": [], "reasoning": str(ai_response)}
+            
+        # Handle the case where actions field might not be present
+        actions = ai_response.get("actions", [])
+        if not actions and isinstance(ai_response, dict):
+            # Check if this might be a direct array of actions
+            if isinstance(ai_response.get("determined_actions"), list):
+                actions = ai_response.get("determined_actions")
+            elif "server" in ai_response and "action" in ai_response:
+                # It might be a single action object
+                actions = [ai_response]
+        
+        for i, action in enumerate(actions, 1):
             determined_actions.append({
                 "step": i,
                 "server": action.get("server", ""),
@@ -373,7 +387,21 @@ Focus on:
         results = []
         action_results = {}  # Store results by step number for dependency resolution
         
-        for action in analysis["determined_actions"]:
+        # Ensure determined_actions exists and is a list
+        determined_actions = analysis.get("determined_actions", [])
+        if not determined_actions:
+            # No actions to execute
+            return [
+                {
+                    "step": 0,
+                    "success": True,
+                    "result": {"message": "No actions determined for this event"},
+                    "timestamp": datetime.now().isoformat(),
+                    "ai_reasoning": analysis.get("reasoning", "AI analysis did not determine any actions needed")
+                }
+            ]
+        
+        for action in determined_actions:
             step = action.get("step", len(results) + 1)
             
             # Check if this action depends on a previous step
@@ -415,6 +443,22 @@ Focus on:
             
             if should_execute:
                 try:
+                    # Ensure required fields are present
+                    if "server" not in action or "action" not in action:
+                        results.append({
+                            "step": step,
+                            "action": action,
+                            "success": False,
+                            "error": "Missing required server or action field in action definition",
+                            "timestamp": datetime.now().isoformat(),
+                            "ai_reasoning": action.get("rationale", "")
+                        })
+                        continue
+                        
+                    # Ensure parameters is a dict
+                    if "parameters" not in action:
+                        action["parameters"] = {}
+                        
                     # Enhance parameters with dependency results if needed
                     enhanced_parameters = self.enhance_parameters_with_dependencies(
                         action["parameters"], dependency_result, action
